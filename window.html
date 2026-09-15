@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>vis10n - test</title>
+<style>
+  :root {
+    --line: #1f1f1f;
+    --border: 4px;
+    --page: #ebe8e1;
+    --panel: #faf8f3;
+    --text: #1f1f1f;
+    --muted: #6b6760;
+    --hover: #efe9dc;
+    --square: 224px; /* 28px * 8 */
+    --btn-h: 56px;
+    --label-h: 40px;
+    --shadow: 6px;
+    --shadow-colour: #3d5aa8;
+  }
+
+  body {
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--page);
+    font: 15px/1.2 system-ui, sans-serif;
+    color: var(--text);
+  }
+
+  .window {
+    position: absolute;
+    border: var(--border) solid var(--line);
+    background: var(--line);
+    box-shadow: var(--shadow) var(--shadow) 0 var(--shadow-colour);
+    display: flex;
+    flex-direction: column;
+    gap: var(--border);
+  }
+
+  .titlebar {
+    background: #2f6fd6;
+    color: #fff;
+    padding: 6px 7px 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .titlebar.dragging {
+    cursor: grabbing;
+  }
+
+  .titlebar .close {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e5401c;
+    border: 2px solid #fff;
+    border-radius: 3px;
+  }
+
+  .titlebar .close:hover {
+    background: #f25531;
+  }
+
+  .titlebar .close:active {
+    background: #c93414;
+  }
+
+  /* Cells sit over the line colour; the gaps become the thick borders */
+  .content {
+    display: flex;
+    gap: var(--border);
+  }
+
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--border);
+  }
+
+  .col > * {
+    background: var(--panel);
+  }
+
+  .label {
+    height: var(--label-h);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .square {
+    width: var(--square);
+    height: var(--square);
+    background: #fff;
+  }
+
+  canvas.square {
+    display: block;
+    image-rendering: pixelated;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  button {
+    height: var(--btn-h);
+    border: 0;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    font-size: 17px;
+    font-weight: 600;
+    padding: 0 18px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: var(--hover);
+  }
+
+  button:active {
+    background: #e3dccb;
+  }
+
+  [hidden] { display: none !important; }
+
+  /* Pixel art backdrop, drawn once at low resolution and scaled up */
+  #backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+
+  /* Launcher under the backdrop title; top is set by the backdrop script */
+  .launcher {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 28px;
+  }
+
+  .launcher button {
+    height: auto;
+    padding: 14px 30px;
+    font-size: 20px;
+    font-weight: 700;
+    background: #fbf7ef;
+    border: var(--border) solid var(--line);
+    box-shadow: var(--shadow) var(--shadow) 0 var(--shadow-colour);
+    transition: transform 0.05s, box-shadow 0.05s;
+  }
+
+  .launcher button:hover {
+    background: #fff;
+    transform: translate(2px, 2px);
+    box-shadow: 4px 4px 0 var(--shadow-colour);
+  }
+
+  .launcher button:active {
+    transform: translate(var(--shadow), var(--shadow));
+    box-shadow: 0 0 0 var(--shadow-colour);
+  }
+
+  #modelBtn { text-align: left; }
+
+  #outputSquare {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 160px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .col.actions { width: 160px; }
+  #submitBtn { flex: 1; height: auto; }
+
+  /* Training window */
+  :root {
+    --accent: #2f6fd6;
+    --row-h: 40px;
+  }
+
+  .train-main { width: 520px; }
+  .train-side { width: 260px; }
+
+  .swatch {
+    display: inline-block;
+    width: 14px;
+    height: 3px;
+    margin: 0 6px 0 14px;
+    vertical-align: middle;
+    background: var(--accent);
+  }
+
+  .swatch:first-child { margin-left: 0; }
+
+  .acc-value {
+    margin-left: auto;
+    color: #e5401c;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .conf-value {
+    margin-left: auto;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .spinner {
+    width: 56px;
+    height: 56px;
+    box-sizing: border-box;
+    border: 6px solid #e3dccb;
+    border-top-color: #2f6fd6;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .swatch.acc {
+    height: 4px;
+    background: #e5401c;
+  }
+
+  #graph {
+    display: block;
+    width: 520px;
+    height: 300px;
+    background: #fff;
+  }
+
+  /* Rows made of tiles: the row's gaps show the line colour */
+  .col > .progress,
+  .col > .arg-row {
+    height: var(--row-h);
+    display: grid;
+    gap: var(--border);
+    background: var(--line);
+  }
+
+  .progress { grid-template-columns: 90px 1fr; }
+  .arg-row  { grid-template-columns: 1fr 100px; }
+
+  .progress > *,
+  .arg-row > * {
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .progress > .progress-track {
+    padding: 0;
+    align-items: stretch;
+    background: #fff;
+  }
+
+  .progress-fill {
+    width: 0;
+    background: #2e9e4f;
+  }
+
+  .arg-row > label {
+    font-family: ui-monospace, Consolas, monospace;
+  }
+
+  .arg-row > input {
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    text-align: right;
+    outline: none;
+  }
+
+  .arg-row > input:focus {
+    box-shadow: inset 0 0 0 3px var(--accent);
+  }
+
+  .filler { flex: 1; }
+
+  /* Drag-to-train slider */
+  .slider {
+    position: relative;
+    height: var(--btn-h);
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .slider-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 56px;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* Knob sits inset in the rail; translateX moves it along */
+  .slider-knob {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: calc(var(--btn-h) - 12px);
+    height: calc(var(--btn-h) - 12px);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    border: 3px solid var(--line);
+    border-radius: 50%;
+    cursor: grab;
+  }
+
+  .slider-knob.dragging { cursor: grabbing; }
+
+  .slider.cancel .slider-knob { background: #e5401c; }
+
+  .slider.snap .slider-knob,
+  .slider.snap .slider-hint {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  #saveBtn,
+  #submitBtn {
+    background: #2e9e4f;
+    color: #fff;
+  }
+
+  #saveBtn:hover,  #submitBtn:hover  { background: #37b35b; }
+  #saveBtn:active, #submitBtn:active { background: #268642; }
+
+  /* Models window */
+  .models-col { width: 400px; }
+
+  .col > .model-list {
+    height: 460px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+  }
+
+  .model-list > * {
+    flex: none;
+    height: 48px;
+    box-sizing: border-box;
+    border-bottom: var(--border) solid var(--line);
+    text-align: left;
+    font-size: 16px;
+    background: var(--panel);
+  }
+
+  .model-list > button.selected {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .model-list > .empty {
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .col > .name-row {
+    height: var(--btn-h);
+    display: flex;
+    background: #fff;
+  }
+
+  .name-row > input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    padding: 0 14px;
+    outline: none;
+  }
+
+  .name-row > input:focus {
+    box-shadow: inset 0 0 0 3px var(--accent);
+  }
+</style>
+</head>
+<body>
+  <canvas id="backdrop"></canvas>
+
+  <div class="launcher" id="launcher">
+    <button id="openTestBtn">test model</button>
+    <button id="openTrainBtn">train model</button>
+  </div>
+
+  <div class="window" id="mainWindow" hidden>
+    <div class="titlebar">
+      <span>vis10n - test</span>
+      <button class="close" aria-label="Close">
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="content">
+      <div class="col">
+        <div class="label">Input</div>
+        <canvas class="square" id="inputSquare" width="28" height="28"></canvas>
+        <button id="clearBtn">clear</button>
+      </div>
+
+      <div class="col">
+        <button id="modelBtn">model: none</button>
+        <div class="label">Output<span class="conf-value" id="confValue"></span></div>
+        <div class="square" id="outputSquare"></div>
+      </div>
+
+      <div class="col actions">
+        <button id="trainBtn">train model</button>
+        <button id="submitBtn">submit</button>      </div>
+    </div>
+  </div>
+
+  <div class="window" id="trainWindow" hidden>
+    <div class="titlebar">
+      <span>train model</span>
+      <button class="close" aria-label="Close">
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="content">
+      <div class="col train-main">
+        <div class="label">
+          <i class="swatch"></i>loss<i class="swatch acc"></i>accuracy
+          <span class="acc-value" id="accValue">–</span>
+        </div>
+        <canvas id="graph"></canvas>
+
+        <div class="progress" id="epochProgress">
+          <div>epoch</div>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+        </div>
+
+        <div class="progress" id="totalProgress">
+          <div>total</div>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+        </div>
+
+        <div class="slider" id="trainSlider">
+          <div class="slider-hint">start training</div>
+          <div class="slider-knob"></div>
+        </div>
+      </div>
+
+      <div class="col train-side" id="argsCol">
+        <div class="label">Args</div>
+        <div class="filler"></div>
+        <button id="saveBtn">save model</button>
+        <div class="name-row">
+          <input id="modelName" type="text" placeholder="model name" spellcheck="false">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="window" id="modelsWindow" hidden>
+    <div class="titlebar">
+      <span>models</span>
+      <button class="close" aria-label="Close">
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="content">
+      <div class="col models-col">
+        <div class="label">Saved models</div>
+        <div class="model-list" id="modelList"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Backdrop: pixel art landscape with a dithered sky gradient and faint digits in the sky
+  (() => {
+    const backdrop = document.getElementById('backdrop');
+    const bctx = backdrop.getContext('2d');
+    const PX = 6;                      // screen pixels per art pixel
+
+    // Palette
+    const SKY = ['#5b86d6', '#6f96dc', '#86a7e2', '#9fb9e7', '#bccbe9', '#d9d9e2', '#efe0cf', '#f6e2bf'];
+    const SUN_TOP = '#f6d26b', SUN_BOTTOM = '#f2a65a';
+    const CLOUD = '#fbf7ef', CLOUD_SHADE = '#e6e0d8';
+    const SNOW = '#eef0f6', FAR_MTN = '#a9b8dd', NEAR_MTN = '#8397c9';
+    const HILLS = '#7dbb84', GROUND = '#5a9c65', TREES = '#3f7d4c';
+    const TITLE_FILL = '#fbf7ef', TITLE_OUTLINE = '#1f1f1f', TITLE_SHADOW = '#3d5aa8';
+
+    // Title lettering, 5x7 like the digits
+    const TITLE = 'vis10n';
+    const LETTERS = {
+      v: ['00000', '00000', '10001', '10001', '10001', '01010', '00100'],
+      i: ['00100', '00000', '01100', '00100', '00100', '00100', '01110'],
+      s: ['00000', '00000', '01111', '10000', '01110', '00001', '11110'],
+      n: ['00000', '00000', '10110', '11001', '10001', '10001', '10001'],
+    };
+
+    // 4x4 ordered dither thresholds (0-15), used to blend sky bands pixel by pixel
+    const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+
+    // X = cloud, S = cloud shadow
+    const CLOUD_SHAPE = [
+      '.....XXXX.......',
+      '...XXXXXXXX.XX..',
+      '.XXXXXXXXXXXXXXX',
+      'XXXXXXXXXXXXXXXX',
+      '.SSSSSSSSSSSSSS.',
+    ];
+    // [x as fraction of width, y as fraction of horizon, pixel scale]
+    const CLOUDS = [[0.06, 0.16, 3], [0.33, 0.07, 2], [0.52, 0.32, 3], [0.85, 0.10, 2], [0.2, 0.45, 2]];
+
+    const GLYPHS = [
+      ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+      ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+      ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
+      ['11110', '00001', '00001', '01110', '00001', '00001', '11110'],
+      ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+      ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+      ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+      ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+      ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+      ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+    ];
+
+    const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+
+    // Deterministic random 0..1 for an integer + seed, so resizing doesn't reshuffle the art
+    function hash(i, seed) {
+      let h = Math.imul(i ^ Math.imul(seed, 0x9e3779b1), 0x85ebca6b);
+      h ^= h >>> 13;
+      h = Math.imul(h, 0xc2b2ae35);
+      h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    }
+
+    // Smooth 1D value noise, and a mountain ridge made of a few octaves of it
+    function noise(x, seed) {
+      const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
+      return hash(i, seed) * (1 - u) + hash(i + 1, seed) * u;
+    }
+
+    function ridge(x, seed) {
+      return noise(x / 40, seed) * 0.6 + noise(x / 15, seed + 1) * 0.3 + noise(x / 6, seed + 2) * 0.1;
+    }
+
+    function draw() {
+      const cols = Math.ceil(window.innerWidth / PX);
+      const rows = Math.ceil(window.innerHeight / PX);
+      backdrop.width = cols;
+      backdrop.height = rows;
+      // Exact multiples of PX so every art pixel is the same size on screen
+      backdrop.style.width = `${cols * PX}px`;
+      backdrop.style.height = `${rows * PX}px`;
+
+      const img = bctx.createImageData(cols, rows);
+      const buf = img.data;
+      const horizon = Math.round(rows * 0.62);
+
+      function set(x, y, [r, g, b]) {
+        if (x < 0 || y < 0 || x >= cols || y >= rows) return;
+        const i = (y * cols + x) * 4;
+        buf[i] = r; buf[i + 1] = g; buf[i + 2] = b; buf[i + 3] = 255;
+      }
+
+      function lighten(x, y, amount) {
+        if (x < 0 || y < 0 || x >= cols || y >= rows) return;
+        const i = (y * cols + x) * 4;
+        for (let c = 0; c < 3; c++) buf[i + c] += (255 - buf[i + c]) * amount;
+      }
+
+      function fillDown(x, top, colour) {
+        for (let y = Math.max(0, top); y < rows; y++) set(x, y, colour);
+      }
+
+      // Sky: colour bands down to the horizon, dithered into each other
+      const sky = SKY.map(rgb);
+      for (let y = 0; y < rows; y++) {
+        const t = Math.min(y / horizon, 1) * (sky.length - 1);
+        const band = Math.min(Math.floor(t), sky.length - 2);
+        const frac = t - band;
+        for (let x = 0; x < cols; x++) {
+          set(x, y, frac * 16 > BAYER[y % 4][x % 4] ? sky[band + 1] : sky[band]);
+        }
+      }
+
+      // Faint digits drifting in the sky
+      for (let sy = 0; (sy + 1) * 12 < horizon * 0.85; sy++) {
+        for (let sx = 0; sx * 11 < cols; sx++) {
+          const slot = sy * 4096 + sx;
+          if (hash(slot, 11) > 0.12) continue;
+          const glyph = GLYPHS[Math.floor(hash(slot, 12) * 10)];
+          const ox = sx * 11 + Math.floor(hash(slot, 13) * 6);
+          const oy = sy * 12 + Math.floor(hash(slot, 14) * 5);
+          glyph.forEach((line, gy) => {
+            for (let gx = 0; gx < 5; gx++) {
+              if (line[gx] === '1') lighten(ox + gx, oy + gy, 0.22);
+            }
+          });
+        }
+      }
+
+      // Clouds
+      const cloud = rgb(CLOUD), cloudShade = rgb(CLOUD_SHADE);
+      for (const [fx, fy, s] of CLOUDS) {
+        const ox = Math.round(fx * cols), oy = Math.round(fy * horizon);
+        CLOUD_SHAPE.forEach((line, cy) => {
+          [...line].forEach((ch, cx) => {
+            if (ch === '.') return;
+            for (let py = 0; py < s; py++) {
+              for (let px = 0; px < s; px++) {
+                set(ox + cx * s + px, oy + cy * s + py, ch === 'X' ? cloud : cloudShade);
+              }
+            }
+          });
+        });
+      }
+
+      // Sun, sinking behind the mountains, with retro gaps in its lower half
+      const sunR = Math.round(Math.min(cols, rows) * 0.16);
+      const sunX = Math.round(cols * 0.7), sunY = horizon - Math.round(sunR * 0.3);
+      const sunTop = rgb(SUN_TOP), sunBottom = rgb(SUN_BOTTOM);
+      for (let dy = -sunR; dy <= sunR; dy++) {
+        if (dy > 0 && dy % 6 < Math.floor((dy / sunR) * 5)) continue;
+        for (let dx = -sunR; dx <= sunR; dx++) {
+          if (dx * dx + dy * dy <= sunR * sunR) set(sunX + dx, sunY + dy, dy < 0 ? sunTop : sunBottom);
+        }
+      }
+
+      // Far mountains with snowy peaks
+      const far = rgb(FAR_MTN), snow = rgb(SNOW);
+      for (let x = 0; x < cols; x++) {
+        const top = horizon - Math.round(rows * 0.04 + ridge(x, 1) * rows * 0.26);
+        fillDown(x, top, far);
+        if (top < horizon - rows * 0.2) {
+          for (let y = top; y < top + 3; y++) set(x, y, snow);
+        }
+      }
+
+      // Near mountains
+      const near = rgb(NEAR_MTN);
+      for (let x = 0; x < cols; x++) {
+        fillDown(x, horizon + Math.round(rows * 0.03 - ridge(x * 1.3, 5) * rows * 0.18), near);
+      }
+
+      // Title: big blocky letters centred on screen, in front of the mountains,
+      // black outline like the windows, blue drop shadow
+      const scale = Math.max(2, Math.round(rows / 45));
+      const shadowOffset = Math.max(1, Math.floor(scale / 2)) + 1;
+      const titleW = (TITLE.length * 6 - 1) * scale;
+      const titleH = 7 * scale;
+      // Centre on the visible screen (the canvas can run a few pixels past it), shadow included
+      const titleX = Math.round((window.innerWidth / PX - titleW - shadowOffset) / 2);
+      const titleY = Math.round(window.innerHeight / PX * 0.36 - (titleH + shadowOffset) / 2);
+
+      // Launcher buttons sit just under the title
+      document.getElementById('launcher').style.top = `${(titleY + titleH + shadowOffset) * PX + 32}px`;
+      const mask = new Uint8Array(cols * rows);
+      [...TITLE].forEach((ch, n) => {
+        const glyph = LETTERS[ch] || GLYPHS[Number(ch)];
+        glyph.forEach((line, gy) => {
+          for (let gx = 0; gx < 5; gx++) {
+            if (line[gx] !== '1') continue;
+            for (let py = 0; py < scale; py++) {
+              for (let px = 0; px < scale; px++) {
+                const x = titleX + (n * 6 + gx) * scale + px, y = titleY + gy * scale + py;
+                if (x >= 0 && y >= 0 && x < cols && y < rows) mask[y * cols + x] = 1;
+              }
+            }
+          }
+        });
+      });
+
+      const titleFill = rgb(TITLE_FILL), titleOutline = rgb(TITLE_OUTLINE), titleShadow = rgb(TITLE_SHADOW);
+      const inMask = (x, y) => x >= 0 && y >= 0 && x < cols && y < rows && mask[y * cols + x];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (!inMask(x, y)) continue;
+          // Shadow first, then a 1px outline around the letters, then the fill on top
+          for (let s = 1; s <= shadowOffset; s++) set(x + s, y + s, titleShadow);
+        }
+      }
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (!inMask(x, y)) continue;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (!inMask(x + dx, y + dy)) set(x + dx, y + dy, titleOutline);
+            }
+          }
+        }
+      }
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (inMask(x, y)) set(x, y, titleFill);
+        }
+      }
+
+      // Rolling hills with pixel pine trees
+      const hills = rgb(HILLS), trees = rgb(TREES);
+      const hillTops = [];
+      for (let x = 0; x < cols; x++) {
+        const wave = Math.sin((x / cols) * Math.PI * 3 + 0.8) * 0.5 + 0.5;
+        hillTops[x] = Math.round(rows * 0.8 - wave * rows * 0.05 - noise(x / 25, 9) * rows * 0.03);
+        fillDown(x, hillTops[x], hills);
+      }
+      for (let x = 2; x < cols - 2; x++) {
+        if (hash(x, 21) > 0.07) continue;
+        const base = hillTops[x] + 1;
+        for (let ty = 0; ty < 7; ty++) {
+          const w = Math.floor(ty / 2);
+          for (let dx = -w; dx <= w; dx++) set(x + dx, base - 8 + ty, trees);
+        }
+        set(x, base - 1, trees);
+      }
+
+      // Foreground ground
+      const ground = rgb(GROUND);
+      for (let x = 0; x < cols; x++) {
+        const wave = Math.sin((x / cols) * Math.PI * 2 + 2.1) * 0.5 + 0.5;
+        fillDown(x, Math.round(rows * 0.9 - wave * rows * 0.04), ground);
+      }
+
+      bctx.putImageData(img, 0, 0);
+    }
+
+    draw();
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(draw, 100);
+    });
+  })();
+
+  const SIZE = 28;
+  const input = document.getElementById('inputSquare');
+  const ctx = input.getContext('2d');
+
+  function clearInput() {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    ctx.fillStyle = '#000';
+  }
+
+  clearInput();
+  document.getElementById('clearBtn').addEventListener('click', clearInput);
+
+  let drawing = false;
+  let last = null;
+
+  // 2px strokes are closest to MNIST's stroke thickness
+  const brushSize = 2;
+
+  function toPixel(e) {
+    const rect = input.getBoundingClientRect();
+    return {
+      x: Math.floor((e.clientX - rect.left) / rect.width * SIZE),
+      y: Math.floor((e.clientY - rect.top) / rect.height * SIZE),
+    };
+  }
+
+  // Bresenham line so fast drags don't leave gaps between pixels
+  function drawLine(a, b) {
+    let { x, y } = a;
+    const dx = Math.abs(b.x - x), dy = -Math.abs(b.y - y);
+    const sx = x < b.x ? 1 : -1, sy = y < b.y ? 1 : -1;
+    let err = dx + dy;
+    const shift = Math.floor((brushSize - 1) / 2);
+    while (true) {
+      ctx.fillRect(x - shift, y - shift, brushSize, brushSize);
+      if (x === b.x && y === b.y) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x += sx; }
+      if (e2 <= dx) { err += dx; y += sy; }
+    }
+  }
+
+  input.addEventListener('pointerdown', e => {
+    drawing = true;
+    input.setPointerCapture(e.pointerId);
+    last = toPixel(e);
+    drawLine(last, last);
+  });
+
+  input.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const p = toPixel(e);
+    drawLine(last, p);
+    last = p;
+  });
+
+  function stop() {
+    drawing = false;
+    last = null;
+  }
+
+  input.addEventListener('pointerup', stop);
+  input.addEventListener('pointercancel', stop);
+
+  // Training args: add a line here to get a new input
+  const TRAIN_ARGS = [
+    { name: 'trainset_size', value: 10000, step: 1 },
+    { name: 'testset_size',  value: 1000,  step: 1 },
+    { name: 'batch_size',    value: 64,    step: 1 },
+    { name: 'epochs',        value: 3,     step: 1 },
+    { name: 'learning_rate', value: 0.001, step: 'any' },
+  ];
+
+  const argsCol = document.getElementById('argsCol');
+  const argsFiller = argsCol.querySelector('.filler');
+
+  for (const arg of TRAIN_ARGS) {
+    const row = document.createElement('div');
+    row.className = 'arg-row';
+    row.innerHTML = `<label for="arg-${arg.name}">${arg.name}</label>
+      <input id="arg-${arg.name}" type="number" step="${arg.step}" value="${arg.value}">`;
+    argsCol.insertBefore(row, argsFiller);
+  }
+
+  function readArgs() {
+    return Object.fromEntries(TRAIN_ARGS.map(arg =>
+      [arg.name, Number(document.getElementById(`arg-${arg.name}`).value)]
+    ));
+  }
+
+  // Progress bars: fraction is 0..1
+  function setProgress(id, fraction) {
+    const el = document.getElementById(id);
+    const pct = Math.round(Math.max(0, Math.min(fraction, 1)) * 100);
+    el.querySelector('.progress-fill').style.width = `${pct}%`;
+  }
+
+  // Graph: loss per batch (left axis), accuracy per epoch (right axis)
+  const graph = document.getElementById('graph');
+  const gctx = graph.getContext('2d');
+  const GRAPH_W = 520, GRAPH_H = 300;
+  const dpr = window.devicePixelRatio || 1;
+  graph.width = GRAPH_W * dpr;
+  graph.height = GRAPH_H * dpr;
+  gctx.scale(dpr, dpr);
+
+  function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}) {
+    const pad = { l: 44, r: 48, t: 16, b: 28 };
+    const w = GRAPH_W - pad.l - pad.r;
+    const h = GRAPH_H - pad.t - pad.b;
+    const totalBatches = Math.max(batchesPerEpoch * epochs, loss.length, 1);
+    const maxLoss = Math.max(0.5, Math.ceil(Math.max(0, ...loss) * 2) / 2);
+    const X = batch => pad.l + (batch / totalBatches) * w;
+    const Y = frac => pad.t + h - frac * h;
+
+    gctx.clearRect(0, 0, GRAPH_W, GRAPH_H);
+    gctx.font = '11px system-ui, sans-serif';
+    gctx.fillStyle = '#6b6760';
+
+    // Horizontal grid + axis labels
+    gctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = Y(i / 4);
+      gctx.strokeStyle = '#ece8df';
+      gctx.beginPath(); gctx.moveTo(pad.l, y); gctx.lineTo(pad.l + w, y); gctx.stroke();
+      gctx.textBaseline = 'middle';
+      gctx.textAlign = 'right';
+      gctx.fillText((maxLoss * i / 4).toFixed(1), pad.l - 8, y);
+      gctx.textAlign = 'left';
+      gctx.fillText(`${i * 25}%`, pad.l + w + 8, y);
+    }
+
+    // Epoch boundaries
+    gctx.textAlign = 'center';
+    gctx.textBaseline = 'top';
+    gctx.fillText('0', X(0), pad.t + h + 8);
+    if (batchesPerEpoch && epochs) {
+      gctx.setLineDash([4, 4]);
+      for (let e = 1; e <= epochs; e++) {
+        const x = X(e * batchesPerEpoch);
+        if (e < epochs) {
+          gctx.strokeStyle = '#d9d4c8';
+          gctx.beginPath(); gctx.moveTo(x, pad.t); gctx.lineTo(x, pad.t + h); gctx.stroke();
+        }
+        gctx.fillText(`epoch ${e}`, x - (e === epochs ? 20 : 0), pad.t + h + 8);
+      }
+      gctx.setLineDash([]);
+    }
+
+    // Loss line
+    if (loss.length > 1) {
+      gctx.strokeStyle = '#2f6fd6';
+      gctx.lineWidth = 1.5;
+      gctx.beginPath();
+      loss.forEach((v, i) => {
+        const x = X(i + 1), y = Y(v / maxLoss);
+        i ? gctx.lineTo(x, y) : gctx.moveTo(x, y);
+      });
+      gctx.stroke();
+    }
+
+    // Accuracy line + points
+    if (accuracy.length && batchesPerEpoch) {
+      const pts = accuracy.map((a, e) => [X((e + 1) * batchesPerEpoch), Y(a)]);
+      gctx.strokeStyle = gctx.fillStyle = '#e5401c';
+      gctx.lineWidth = 2;
+      gctx.beginPath();
+      pts.forEach(([x, y], i) => i ? gctx.lineTo(x, y) : gctx.moveTo(x, y));
+      gctx.stroke();
+      for (const [x, y] of pts) {
+        gctx.beginPath(); gctx.arc(x, y, 3.5, 0, Math.PI * 2); gctx.fill();
+      }
+    }
+
+    // Axes frame
+    gctx.strokeStyle = '#1f1f1f';
+    gctx.lineWidth = 2;
+    gctx.beginPath();
+    gctx.moveTo(pad.l, pad.t); gctx.lineTo(pad.l, pad.t + h);
+    gctx.lineTo(pad.l + w, pad.t + h); gctx.lineTo(pad.l + w, pad.t);
+    gctx.stroke();
+  }
+
+  drawGraph();
+
+  // Drag-to-train slider: only fires when dragged all the way to the end.
+  // It toggles between start and cancel; the knob snaps back each time.
+  const ARROW_SVG = `<svg width="20" height="16" viewBox="0 0 20 16">
+    <path d="M2 8 H17 M11 2 L17 8 L11 14" fill="none" stroke="#fff" stroke-width="3"
+      stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  function makeSlider(el, { onStart, onCancel }) {
+    const knob = el.querySelector('.slider-knob');
+    const hint = el.querySelector('.slider-hint');
+    const INSET = 6;
+    let startX = null;
+    let x = 0;
+    let running = false;
+
+    knob.innerHTML = ARROW_SVG;
+
+    const maxX = () => el.clientWidth - knob.offsetWidth - INSET * 2;
+
+    function setX(v) {
+      x = v;
+      knob.style.transform = `translateX(${x}px)`;
+      hint.style.opacity = 1 - x / maxX();
+    }
+
+    // Switch between the start and cancel looks
+    function setRunning(value) {
+      running = value;
+      el.classList.toggle('cancel', running);
+      hint.textContent = running ? 'cancel training' : 'start training';
+    }
+
+    knob.addEventListener('pointerdown', e => {
+      knob.setPointerCapture(e.pointerId);
+      knob.classList.add('dragging');
+      el.classList.remove('snap');
+      startX = e.clientX - x;
+    });
+
+    knob.addEventListener('pointermove', e => {
+      if (startX === null) return;
+      setX(Math.max(0, Math.min(e.clientX - startX, maxX())));
+    });
+
+    function release() {
+      if (startX === null) return;
+      startX = null;
+      knob.classList.remove('dragging');
+      el.classList.add('snap');
+      const reachedEnd = x >= maxX() - 2;
+      setX(0);
+      if (!reachedEnd) return;
+
+      if (running) {
+        setRunning(false);
+        onCancel();
+      } else {
+        setRunning(true);
+        onStart();
+      }
+    }
+
+    knob.addEventListener('pointerup', release);
+    knob.addEventListener('pointercancel', release);
+
+    // setRunning(false) is for when training finishes on its own
+    return { setRunning };
+  }
+
+  // Training run: one websocket per run, streaming updates from train()
+  let trainSocket = null;
+  let run = null;
+  let redrawQueued = false;
+
+  function queueRedraw() {
+    if (redrawQueued) return;
+    redrawQueued = true;
+    requestAnimationFrame(() => {
+      redrawQueued = false;
+      drawGraph(run);
+    });
+  }
+
+  function handleUpdate(update) {
+    switch (update.type) {
+      case 'batch':
+        run.loss.push(update.loss);
+        run.batchesPerEpoch = update.batches;
+        setProgress('epochProgress', update.batch / update.batches);
+        setProgress('totalProgress', (update.epoch + update.batch / update.batches) / run.epochs);
+        queueRedraw();
+        break;
+
+      case 'epoch':
+        run.accuracy.push(update.accuracy);
+        document.getElementById('accValue').textContent = `${(update.accuracy * 100).toFixed(1)}%`;
+        setProgress('totalProgress', (update.epoch + 1) / run.epochs);
+        queueRedraw();
+        break;
+
+      case 'done':
+        console.log(update.cancelled ? 'training cancelled' : 'training done');
+        endRun();
+        break;
+
+      case 'error':
+        console.error('training error:', update.message);
+        endRun();
+        break;
+    }
+  }
+
+  function endRun() {
+    if (trainSocket) trainSocket.close();
+    trainSocket = null;
+    trainSlider.setRunning(false);
+  }
+
+  function startTraining() {
+    const args = readArgs();
+    run = { loss: [], accuracy: [], batchesPerEpoch: 0, epochs: args.epochs };
+    setProgress('epochProgress', 0);
+    setProgress('totalProgress', 0);
+    document.getElementById('accValue').textContent = '–';
+    drawGraph(run);
+
+    const socket = new WebSocket(`ws://${location.host}/ws/train`);
+    trainSocket = socket;
+
+    socket.onopen = () => socket.send(JSON.stringify({ type: 'start', args }));
+    // Ignore messages from an older run that was cancelled
+    socket.onmessage = e => {
+      if (socket === trainSocket) handleUpdate(JSON.parse(e.data));
+    };
+    socket.onclose = () => {
+      if (socket === trainSocket) endRun();
+    };
+  }
+
+  function cancelTraining() {
+    if (trainSocket && trainSocket.readyState === WebSocket.OPEN) {
+      trainSocket.send(JSON.stringify({ type: 'cancel' }));
+    }
+    trainSocket = null;
+  }
+
+  const trainSlider = makeSlider(document.getElementById('trainSlider'), {
+    onStart: startTraining,
+    onCancel: cancelTraining,
+  });
+
+  // Save the last trained model under the given name
+  const saveBtn = document.getElementById('saveBtn');
+
+  saveBtn.addEventListener('click', async () => {
+    const name = document.getElementById('modelName').value.trim();
+    let text;
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log('saved model to', data.path);
+        text = 'saved';
+      } else {
+        text = typeof data.detail === 'string' ? data.detail : 'invalid name';
+      }
+    } catch (err) {
+      console.error('save failed:', err);
+      text = 'save failed';
+    }
+    saveBtn.textContent = text;
+    setTimeout(() => { saveBtn.textContent = 'save model'; }, 1500);
+  });
+
+  // Windows: drag by title bar, close with the x, clicked window comes to the front
+  let topZ = 1;
+  const WINDOW_SHADOW = 6; // matches --shadow
+
+  function makeWindow(win) {
+    const titlebar = win.querySelector('.titlebar');
+    let dragStart = null;
+    let placed = false;
+
+    // Position the window, clamped so it stays fully inside the viewport
+    function place(x, y) {
+      const rect = win.getBoundingClientRect();
+      const page = document.documentElement;
+      // Leave room for the drop shadow on the right and bottom
+      const maxX = Math.floor(page.clientWidth - Math.ceil(rect.width) - WINDOW_SHADOW);
+      const maxY = Math.floor(page.clientHeight - Math.ceil(rect.height) - WINDOW_SHADOW);
+      win.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+      win.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+    }
+
+    function bringToFront() {
+      win.style.zIndex = ++topZ;
+    }
+
+    function open() {
+      win.hidden = false;
+      if (placed) {
+        place(win.offsetLeft, win.offsetTop);
+      } else {
+        const rect = win.getBoundingClientRect();
+        const page = document.documentElement;
+        place((page.clientWidth - rect.width) / 2, (page.clientHeight - rect.height) / 2);
+        placed = true;
+      }
+      bringToFront();
+    }
+
+    win.addEventListener('pointerdown', bringToFront, true);
+
+    titlebar.addEventListener('pointerdown', e => {
+      if (e.target.closest('.close')) return;
+      titlebar.setPointerCapture(e.pointerId);
+      titlebar.classList.add('dragging');
+      dragStart = { x: e.clientX - win.offsetLeft, y: e.clientY - win.offsetTop };
+    });
+
+    titlebar.addEventListener('pointermove', e => {
+      if (!dragStart) return;
+      place(e.clientX - dragStart.x, e.clientY - dragStart.y);
+    });
+
+    function endDrag() {
+      dragStart = null;
+      titlebar.classList.remove('dragging');
+    }
+
+    titlebar.addEventListener('pointerup', endDrag);
+    titlebar.addEventListener('pointercancel', endDrag);
+
+    win.querySelector('.close').addEventListener('click', () => {
+      win.hidden = true;
+    });
+
+    window.addEventListener('resize', () => {
+      if (!win.hidden) place(win.offsetLeft, win.offsetTop);
+    });
+
+    return {
+      open,
+      close: () => { win.hidden = true; },
+    };
+  }
+
+  const mainWindow = makeWindow(document.getElementById('mainWindow'));
+  const trainWindow = makeWindow(document.getElementById('trainWindow'));
+
+  document.getElementById('openTestBtn').addEventListener('click', mainWindow.open);
+  document.getElementById('openTrainBtn').addEventListener('click', trainWindow.open);
+  document.getElementById('trainBtn').addEventListener('click', trainWindow.open);
+
+  // Model picker: lists saved models, clicking one selects it
+  const modelsWindow = makeWindow(document.getElementById('modelsWindow'));
+  const modelBtn = document.getElementById('modelBtn');
+  const modelList = document.getElementById('modelList');
+  let selectedModel = null;
+
+  function renderModelList(models) {
+    modelList.replaceChildren();
+    if (!models.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'no saved models';
+      modelList.append(empty);
+      return;
+    }
+    for (const name of models) {
+      const item = document.createElement('button');
+      item.textContent = name;
+      item.classList.toggle('selected', name === selectedModel);
+      item.addEventListener('click', () => {
+        selectedModel = name;
+        modelBtn.textContent = `model: ${name}`;
+        modelsWindow.close();
+      });
+      modelList.append(item);
+    }
+  }
+
+  modelBtn.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/models');
+      renderModelList((await res.json()).models);
+    } catch (err) {
+      console.error('could not load models:', err);
+      renderModelList([]);
+    }
+    modelsWindow.open();
+  });
+
+  // Submit: send the drawing to the selected model, show the predicted digit
+  const submitBtn = document.getElementById('submitBtn');
+  const outputSquare = document.getElementById('outputSquare');
+
+  function flashSubmit(text) {
+    submitBtn.textContent = text;
+    setTimeout(() => { submitBtn.textContent = 'submit'; }, 1500);
+  }
+
+  // Canvas is black on white; MNIST is white on black, so invert
+  function readPixels() {
+    const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+    const pixels = [];
+    for (let y = 0; y < SIZE; y++) {
+      const row = [];
+      for (let x = 0; x < SIZE; x++) row.push(255 - data[(y * SIZE + x) * 4]);
+      pixels.push(row);
+    }
+    return pixels;
+  }
+
+  const confValue = document.getElementById('confValue');
+  let predictRequest = 0;
+
+  submitBtn.addEventListener('click', async () => {
+    if (!selectedModel) {
+      flashSubmit('pick a model');
+      return;
+    }
+
+    // Loading state; the id makes sure only the latest submit shows its result
+    const id = ++predictRequest;
+    outputSquare.innerHTML = '<div class="spinner"></div>';
+    confValue.textContent = '';
+
+    try {
+      const res = await fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: selectedModel, pixels: readPixels() }),
+      });
+      const data = await res.json();
+      if (id !== predictRequest) return;
+
+      if (!res.ok) {
+        outputSquare.textContent = '';
+        flashSubmit(typeof data.detail === 'string' ? data.detail : 'failed');
+        return;
+      }
+      outputSquare.textContent = data.digit;
+      confValue.textContent = `${(data.probabilities[data.digit] * 100).toFixed(1)}%`;
+    } catch (err) {
+      if (id !== predictRequest) return;
+      console.error('predict failed:', err);
+      outputSquare.textContent = '';
+      flashSubmit('failed');
+    }
+  });
+
+  // Server connection check
+  fetch('/api/ping')
+    .then(res => res.json())
+    .then(data => console.log('server ping:', data))
+    .catch(err => console.warn('server not reachable:', err));
+</script>
+</body>
+</html>

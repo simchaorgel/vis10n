@@ -4,16 +4,19 @@ import numpy as np
 import torch as t
 from PIL import Image, ImageFilter
 
+import torch.nn as nn
+
 from dataset import MNIST_TRANSFORM
-from model import SimpleMLP
+from models import get_model
 from train_model import device
 
 
-def load_model(path) -> SimpleMLP:
+def load_model(path, model_name: str) -> nn.Module:
     """
-    Creates a fresh SimpleMLP and fills it with the weights saved at `path`.
+    Creates a fresh model with the architecture in models/<model_name>.py
+    and fills it with the weights saved at `path`.
     """
-    model = SimpleMLP().to(device)
+    model = get_model(model_name)().to(device)
 
     # map_location puts the weights on this machine's device, whatever device they were saved from
     state_dict = t.load(path, map_location=device)
@@ -80,7 +83,7 @@ def preprocess(pixels) -> np.ndarray:
     return blurred.astype(np.uint8)
 
 
-def predict(model: SimpleMLP, pixels) -> tuple[int, list[float]]:
+def predict(model: nn.Module, pixels) -> tuple[int, list[float]]:
     """
     pixels: 28x28 grid of ints 0-255, white digit on black
 

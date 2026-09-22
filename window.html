@@ -177,7 +177,19 @@
     box-shadow: 0 0 0 var(--shadow-colour);
   }
 
-  #modelBtn { text-align: left; }
+  /* Model button spans the output and submit columns; long names get cut off with … */
+  #modelBtn {
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .col > .row {
+    display: flex;
+    gap: var(--border);
+    background: var(--line);
+  }
 
   #outputSquare {
     display: flex;
@@ -303,6 +315,30 @@
 
   .filler { flex: 1; }
 
+  .col > .select-row {
+    height: 48px;
+    display: flex;
+    background: #fff;
+  }
+
+  .select-row > select {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    color: var(--text);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 14px;
+    padding: 0 10px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .select-row > select:focus {
+    box-shadow: inset 0 0 0 3px var(--accent);
+  }
+
   /* Drag-to-train slider */
   .slider {
     position: relative;
@@ -351,19 +387,21 @@
   }
 
   #saveBtn,
-  #submitBtn {
+  #submitBtn,
+  #confirmSaveBtn {
     background: #2e9e4f;
     color: #fff;
   }
 
-  #saveBtn:hover,  #submitBtn:hover  { background: #37b35b; }
-  #saveBtn:active, #submitBtn:active { background: #268642; }
+  #saveBtn:hover,  #submitBtn:hover,  #confirmSaveBtn:hover  { background: #37b35b; }
+  #saveBtn:active, #submitBtn:active, #confirmSaveBtn:active { background: #268642; }
 
-  /* Models window */
-  .models-col { width: 400px; }
+  /* Models window: list on the left, details of the clicked model on the right */
+  .models-list-col { width: 320px; }
+  .model-details   { width: 420px; }
 
   .col > .model-list {
-    height: 460px;
+    height: 512px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -372,37 +410,155 @@
 
   .model-list > * {
     flex: none;
-    height: 48px;
     box-sizing: border-box;
     border-bottom: var(--border) solid var(--line);
-    text-align: left;
-    font-size: 16px;
-    background: var(--panel);
   }
 
-  .model-list > button.selected {
+  .model-item {
+    height: 60px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    text-align: left;
+  }
+
+  .model-item.active,
+  .model-item.active:hover {
+    background: #e3dccb;
+  }
+
+  .model-item-top {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .model-item-acc {
+    margin-left: auto;
+    color: #e5401c;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .model-item-meta {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .in-use {
+    margin-left: 8px;
+    padding: 2px 6px;
     background: var(--accent);
     color: #fff;
+    font-size: 11px;
+    font-weight: 700;
   }
 
   .model-list > .empty {
+    height: 60px;
     display: flex;
     align-items: center;
-    padding: 0 18px;
+    padding: 0 16px;
     color: var(--muted);
     font-weight: 600;
   }
 
-  .col > .name-row {
-    height: var(--btn-h);
+  .col > .detail-desc {
+    height: 72px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .detail-desc.none { color: var(--muted); }
+
+  .col > .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--border);
+    background: var(--line);
+  }
+
+  .stat-grid > div {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    background: var(--panel);
+    font-size: 13px;
+  }
+
+  .stat-key { color: var(--muted); font-weight: 600; }
+  .stat-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  #modelGraph {
+    display: block;
+    width: 420px;
+    height: 160px;
+    background: #fff;
+  }
+
+  #useModelBtn {
+    flex: 1;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  #deleteModelBtn {
+    width: 150px;
+    background: #e5401c;
+    color: #fff;
+  }
+
+  #deleteModelBtn:hover  { background: #f25531; }
+  #deleteModelBtn:active { background: #c93414; }
+
+  #deleteModelBtn:disabled {
+    background: var(--panel);
+    color: var(--muted);
+    cursor: default;
+  }
+
+  #useModelBtn:hover  { background: #3f7ee3; }
+  #useModelBtn:active { background: #2860bb; }
+
+  #useModelBtn:disabled {
+    background: var(--panel);
+    color: var(--muted);
+    cursor: default;
+  }
+
+  /* Save window */
+  .save-col { width: 380px; }
+
+  .col > .name-row,
+  .col > .desc-row {
     display: flex;
     background: #fff;
   }
 
-  .name-row > input {
+  .col > .name-row { height: var(--btn-h); }
+  .col > .desc-row { height: 120px; }
+
+  .name-row > input,
+  .desc-row > textarea {
     flex: 1;
     min-width: 0;
     border: 0;
+    border-radius: 0;
     background: #fff;
     color: var(--text);
     font: inherit;
@@ -411,7 +567,13 @@
     outline: none;
   }
 
-  .name-row > input:focus {
+  .desc-row > textarea {
+    padding: 12px 14px;
+    resize: none;
+  }
+
+  .name-row > input:focus,
+  .desc-row > textarea:focus {
     box-shadow: inset 0 0 0 3px var(--accent);
   }
 </style>
@@ -443,13 +605,16 @@
 
       <div class="col">
         <button id="modelBtn">model: none</button>
-        <div class="label">Output<span class="conf-value" id="confValue"></span></div>
-        <div class="square" id="outputSquare"></div>
+        <div class="row">
+          <div class="col">
+            <div class="label">Output<span class="conf-value" id="confValue"></span></div>
+            <div class="square" id="outputSquare"></div>
+          </div>
+          <div class="col actions">
+            <button id="submitBtn">submit</button>
+          </div>
+        </div>
       </div>
-
-      <div class="col actions">
-        <button id="trainBtn">train model</button>
-        <button id="submitBtn">submit</button>      </div>
     </div>
   </div>
 
@@ -488,12 +653,13 @@
       </div>
 
       <div class="col train-side" id="argsCol">
+        <div class="label">Architecture</div>
+        <div class="select-row">
+          <select id="archSelect"></select>
+        </div>
         <div class="label">Args</div>
         <div class="filler"></div>
         <button id="saveBtn">save model</button>
-        <div class="name-row">
-          <input id="modelName" type="text" placeholder="model name" spellcheck="false">
-        </div>
       </div>
     </div>
   </div>
@@ -509,9 +675,45 @@
     </div>
 
     <div class="content">
-      <div class="col models-col">
+      <div class="col models-list-col">
         <div class="label">Saved models</div>
         <div class="model-list" id="modelList"></div>
+      </div>
+
+      <div class="col model-details">
+        <div class="label" id="detailName">no model</div>
+        <div class="detail-desc" id="detailDesc"></div>
+        <div class="stat-grid" id="detailStats"></div>
+        <canvas id="modelGraph"></canvas>
+        <div class="row">
+          <button id="useModelBtn">use this model</button>
+          <button id="deleteModelBtn">delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="window" id="saveWindow" hidden>
+    <div class="titlebar">
+      <span>save model</span>
+      <button class="close" aria-label="Close">
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="content">
+      <div class="col save-col">
+        <div class="label">Name</div>
+        <div class="name-row">
+          <input id="modelName" type="text" placeholder="model name" spellcheck="false">
+        </div>
+        <div class="label">Description</div>
+        <div class="desc-row">
+          <textarea id="modelDesc" placeholder="optional"></textarea>
+        </div>
+        <button id="confirmSaveBtn">save</button>
       </div>
     </div>
   </div>
@@ -867,6 +1069,25 @@
     ));
   }
 
+  // Architecture picker: filled from the files in models/, keeping the current choice if it still exists
+  const archSelect = document.getElementById('archSelect');
+
+  async function refreshArchitectures() {
+    try {
+      const res = await fetch('/api/architectures');
+      const { architectures } = await res.json();
+      const current = archSelect.value;
+      archSelect.replaceChildren(...architectures.map(arch => {
+        const option = new Option(arch.name, arch.name);
+        option.title = arch.description;
+        return option;
+      }));
+      if (architectures.some(arch => arch.name === current)) archSelect.value = current;
+    } catch (err) {
+      console.error('could not load architectures:', err);
+    }
+  }
+
   // Progress bars: fraction is 0..1
   function setProgress(id, fraction) {
     const el = document.getElementById(id);
@@ -875,15 +1096,20 @@
   }
 
   // Graph: loss per batch (left axis), accuracy per epoch (right axis)
-  const graph = document.getElementById('graph');
-  const gctx = graph.getContext('2d');
-  const GRAPH_W = 520, GRAPH_H = 300;
-  const dpr = window.devicePixelRatio || 1;
-  graph.width = GRAPH_W * dpr;
-  graph.height = GRAPH_H * dpr;
-  gctx.scale(dpr, dpr);
+  // A graph target is a canvas set up at a fixed size; drawGraph can draw on any of them
+  function setupGraph(canvas, width, height) {
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+    return { ctx, width, height };
+  }
 
-  function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}) {
+  const trainGraph = setupGraph(document.getElementById('graph'), 520, 300);
+
+  function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}, target = trainGraph) {
+    const { ctx: gctx, width: GRAPH_W, height: GRAPH_H } = target;
     const pad = { l: 44, r: 48, t: 16, b: 28 };
     const w = GRAPH_W - pad.l - pad.r;
     const h = GRAPH_H - pad.t - pad.b;
@@ -1090,7 +1316,7 @@
     const socket = new WebSocket(`ws://${location.host}/ws/train`);
     trainSocket = socket;
 
-    socket.onopen = () => socket.send(JSON.stringify({ type: 'start', args }));
+    socket.onopen = () => socket.send(JSON.stringify({ type: 'start', model: archSelect.value, args }));
     // Ignore messages from an older run that was cancelled
     socket.onmessage = e => {
       if (socket === trainSocket) handleUpdate(JSON.parse(e.data));
@@ -1112,32 +1338,6 @@
     onCancel: cancelTraining,
   });
 
-  // Save the last trained model under the given name
-  const saveBtn = document.getElementById('saveBtn');
-
-  saveBtn.addEventListener('click', async () => {
-    const name = document.getElementById('modelName').value.trim();
-    let text;
-    try {
-      const res = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        console.log('saved model to', data.path);
-        text = 'saved';
-      } else {
-        text = typeof data.detail === 'string' ? data.detail : 'invalid name';
-      }
-    } catch (err) {
-      console.error('save failed:', err);
-      text = 'save failed';
-    }
-    saveBtn.textContent = text;
-    setTimeout(() => { saveBtn.textContent = 'save model'; }, 1500);
-  });
 
   // Windows: drag by title bar, close with the x, clicked window comes to the front
   let topZ = 1;
@@ -1216,16 +1416,30 @@
   const trainWindow = makeWindow(document.getElementById('trainWindow'));
 
   document.getElementById('openTestBtn').addEventListener('click', mainWindow.open);
-  document.getElementById('openTrainBtn').addEventListener('click', trainWindow.open);
-  document.getElementById('trainBtn').addEventListener('click', trainWindow.open);
+  document.getElementById('openTrainBtn').addEventListener('click', async () => {
+    await refreshArchitectures();
+    trainWindow.open();
+  });
 
-  // Model picker: lists saved models, clicking one selects it
+  // Models window: list of saved models; clicking one shows its details, "use this model" selects it
   const modelsWindow = makeWindow(document.getElementById('modelsWindow'));
   const modelBtn = document.getElementById('modelBtn');
   const modelList = document.getElementById('modelList');
-  let selectedModel = null;
+  const detailName = document.getElementById('detailName');
+  const detailDesc = document.getElementById('detailDesc');
+  const detailStats = document.getElementById('detailStats');
+  const useModelBtn = document.getElementById('useModelBtn');
+  const modelGraph = setupGraph(document.getElementById('modelGraph'), 420, 160);
 
-  function renderModelList(models) {
+  let models = [];            // [{ name, info }] from the server; info is null for older models
+  let viewedModel = null;     // clicked in the list
+  let selectedModel = null;   // used for predictions
+
+  const pct = v => (v == null ? null : `${(v * 100).toFixed(1)}%`);
+  const num = v => (v == null ? null : Number(v).toLocaleString());
+  const compact = v => (v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${v}`);
+
+  function renderModelList() {
     modelList.replaceChildren();
     if (!models.length) {
       const empty = document.createElement('div');
@@ -1234,28 +1448,203 @@
       modelList.append(empty);
       return;
     }
-    for (const name of models) {
+
+    for (const model of models) {
+      const { name, info } = model;
       const item = document.createElement('button');
-      item.textContent = name;
-      item.classList.toggle('selected', name === selectedModel);
-      item.addEventListener('click', () => {
-        selectedModel = name;
-        modelBtn.textContent = `model: ${name}`;
-        modelsWindow.close();
-      });
+      item.className = 'model-item';
+      item.classList.toggle('active', name === viewedModel);
+
+      const top = document.createElement('span');
+      top.className = 'model-item-top';
+      top.append(name);
+      if (name === selectedModel) {
+        const tag = document.createElement('span');
+        tag.className = 'in-use';
+        tag.textContent = 'in use';
+        top.append(tag);
+      }
+      const acc = document.createElement('span');
+      acc.className = 'model-item-acc';
+      acc.textContent = pct(info?.results?.final_accuracy) ?? '';
+      top.append(acc);
+
+      const meta = document.createElement('span');
+      meta.className = 'model-item-meta';
+      meta.textContent = info?.args
+        ? `${info.model} · ${info.args.epochs} ep · ${compact(info.args.trainset_size)} imgs · ${compact(info.parameters?.total ?? 0)} params`
+        : 'no info saved';
+
+      item.append(top, meta);
+      item.addEventListener('click', () => viewModel(name));
       modelList.append(item);
     }
   }
 
-  modelBtn.addEventListener('click', async () => {
+  function renderDetails() {
+    const model = models.find(m => m.name === viewedModel);
+    const info = model?.info;
+    const { args, results, parameters, environment } = info ?? {};
+
+    detailName.textContent = model ? model.name : 'no model';
+
+    detailDesc.textContent = info?.description || (model ? (info ? 'no description' : 'no info saved for this model') : '');
+    detailDesc.classList.toggle('none', !info?.description);
+
+    const stats = [
+      ['final acc', pct(results?.final_accuracy)],
+      ['best acc', pct(results?.best_accuracy)],
+      ['final loss', results?.final_loss?.toFixed(3)],
+      ['params', num(parameters?.total)],
+      ['epochs', args?.epochs],
+      ['batch size', args?.batch_size],
+      ['learning rate', args?.learning_rate],
+      ['train images', num(args?.trainset_size)],
+      ['test images', num(args?.testset_size)],
+      ['train time', environment ? `${environment.train_seconds}s` : null],
+      ['architecture', info?.model],
+      ['saved', info?.saved?.slice(0, 10)],
+    ];
+    detailStats.replaceChildren(...stats.map(([key, value]) => {
+      const cell = document.createElement('div');
+      const k = document.createElement('span');
+      const v = document.createElement('span');
+      k.className = 'stat-key';
+      v.className = 'stat-val';
+      k.textContent = key;
+      v.textContent = value ?? '–';
+      cell.append(k, v);
+      return cell;
+    }));
+
+    drawGraph(results ? {
+      loss: results.loss_per_batch ?? [],
+      accuracy: results.accuracy_per_epoch ?? [],
+      batchesPerEpoch: info.batches_per_epoch ?? 0,
+      epochs: args?.epochs ?? 0,
+    } : {}, modelGraph);
+
+    useModelBtn.disabled = !model || model.name === selectedModel;
+    useModelBtn.textContent = model && model.name === selectedModel ? 'in use' : 'use this model';
+    resetDelete();
+    deleteModelBtn.disabled = !model;
+  }
+
+  // Delete takes two clicks: the first asks to confirm, the second deletes
+  const deleteModelBtn = document.getElementById('deleteModelBtn');
+  let deleteArmed = false;
+  let deleteTimer;
+
+  function resetDelete() {
+    deleteArmed = false;
+    clearTimeout(deleteTimer);
+    deleteModelBtn.textContent = 'delete';
+  }
+
+  deleteModelBtn.addEventListener('click', async () => {
+    if (!viewedModel) return;
+    if (!deleteArmed) {
+      deleteArmed = true;
+      deleteModelBtn.textContent = 'confirm?';
+      deleteTimer = setTimeout(resetDelete, 3000);
+      return;
+    }
+
+    const name = viewedModel;
+    resetDelete();
+    try {
+      const res = await fetch(`/api/models/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        deleteModelBtn.textContent = typeof data.detail === 'string' ? data.detail : 'failed';
+        deleteTimer = setTimeout(resetDelete, 1500);
+        return;
+      }
+    } catch (err) {
+      console.error('delete failed:', err);
+      return;
+    }
+
+    if (name === selectedModel) {
+      selectedModel = null;
+      modelBtn.textContent = 'model: none';
+    }
+    viewedModel = null;
+    await refreshModels();
+  });
+
+  function viewModel(name) {
+    viewedModel = name;
+    renderModelList();
+    renderDetails();
+  }
+
+  useModelBtn.addEventListener('click', () => {
+    if (!viewedModel) return;
+    selectedModel = viewedModel;
+    modelBtn.textContent = `model: ${selectedModel}`;
+    modelsWindow.close();
+  });
+
+  async function refreshModels() {
     try {
       const res = await fetch('/api/models');
-      renderModelList((await res.json()).models);
+      models = (await res.json()).models;
     } catch (err) {
       console.error('could not load models:', err);
-      renderModelList([]);
+      models = [];
     }
+    // Show the model in use if there is one, otherwise the first
+    const names = models.map(m => m.name);
+    viewModel(names.includes(selectedModel) ? selectedModel : names[0] ?? null);
+  }
+
+  modelBtn.addEventListener('click', async () => {
+    await refreshModels();
     modelsWindow.open();
+  });
+
+  // Save window: asks for a name and description, then saves the last trained model
+  const saveWindow = makeWindow(document.getElementById('saveWindow'));
+  const modelNameInput = document.getElementById('modelName');
+  const modelDescInput = document.getElementById('modelDesc');
+  const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    saveWindow.open();
+    modelNameInput.focus();
+  });
+
+  function flashConfirm(text) {
+    confirmSaveBtn.textContent = text;
+    setTimeout(() => { confirmSaveBtn.textContent = 'save'; }, 1500);
+  }
+
+  async function saveModel() {
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: modelNameInput.value.trim(), description: modelDescInput.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        flashConfirm(typeof data.detail === 'string' ? data.detail : 'invalid name');
+        return;
+      }
+      console.log('saved model to', data.path);
+      modelNameInput.value = '';
+      modelDescInput.value = '';
+      saveWindow.close();
+    } catch (err) {
+      console.error('save failed:', err);
+      flashConfirm('save failed');
+    }
+  }
+
+  confirmSaveBtn.addEventListener('click', saveModel);
+  modelNameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveModel();
   });
 
   // Submit: send the drawing to the selected model, show the predicted digit

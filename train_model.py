@@ -11,7 +11,6 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from model import SimpleMLP
 from dataset import get_mnist
 
 
@@ -36,7 +35,7 @@ device = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda.i
 
 
 # Train model
-def train(args: SimpleMLPTrainingArgs, on_update = None, cancel = None) -> tuple[list[float], list[float], SimpleMLP]:
+def train(args: SimpleMLPTrainingArgs, model_class: type[nn.Module], on_update = None, cancel = None) -> tuple[list[float], list[float], nn.Module]:
     """
     Trains the model, using training parameters from the `args` object.
 
@@ -44,7 +43,7 @@ def train(args: SimpleMLPTrainingArgs, on_update = None, cancel = None) -> tuple
         The model, and lists of loss & accuracy.
     """
     # Create model object
-    model = SimpleMLP().to(device)
+    model = model_class().to(device)
 
     # Load datasets (train and test sets)
     mnist_trainset, test_dataset = get_mnist(args.trainset_size, args.testset_size)

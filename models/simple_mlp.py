@@ -4,7 +4,7 @@
 import torch.nn as nn
 from torch import Tensor
 
-from ._simple_mlp_layers import Flatten, Linear, ReLU
+from ._linear_components import Flatten, Linear, ReLU
 
 
 # Model

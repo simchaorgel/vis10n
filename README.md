@@ -1,7 +1,7 @@
 # VIS10N
 <p>
-  <img src="screenshots/screenshot1.png" width="49%">
-  <img src="screenshots/screenshot2.png" width="49%">
+  <img src="assets/screenshots/screenshot1.png" width="49%">
+  <img src="assets/screenshots/screenshot2.png" width="49%">
 </p>
 
 This project is my basic implementation of training and running hand-drawn digit classification models, trained on the MNIST dataset. Model architectures live in `models/`, so different structures can be trained and compared side by side; the first, `simple_mlp`, has 3 layers (28*28, 100, 10).
@@ -47,7 +47,8 @@ Before predicting, drawings are preprocessed to look like MNIST digits: cropped,
 ## Project structure
 - `models/` – model architectures, one file per architecture (`_`-prefixed files hold shared layers)
 - `weights/` – saved models and their info files (not committed)
-- `dataset.py` – MNIST loading and transforms
+- `dataloaders/` – one module per dataset: `mnist.py` (loading and transforms), `cifar.py` (CIFAR-10 test set)
+- `assets/` – images the UI loads
 - `train_model.py` – training args and training loop
 - `predict.py` – loading saved models, preprocessing and prediction
 - `main.py` – FastAPI server

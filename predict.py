@@ -6,9 +6,10 @@ from PIL import Image, ImageFilter
 
 import torch.nn as nn
 
-from dataset import MNIST_TRANSFORM
+from dataloaders import cifar, imagenet
+from dataloaders.mnist import MNIST_TRANSFORM
 from models import get_model
-from train_model import device
+from device import device
 
 
 def load_model(path, model_name: str) -> nn.Module:
@@ -105,3 +106,44 @@ def predict(model: nn.Module, pixels) -> tuple[int, list[float]]:
     digit = probabilities.argmax().item()
 
     return digit, probabilities.tolist()
+
+
+def predict_cifar(model: nn.Module, index: int) -> tuple[int, list[float]]:
+    """
+    index: which image of the CIFAR-10 test set to run
+
+    Returns:
+        The predicted class index, and the probability for each of the ten classes.
+    """
+    # Already normalised the same way training data is, so no preprocessing here
+    x = cifar.as_tensor(index).to(device)       # (1, 3, 32, 32)
+
+    with t.inference_mode():
+        logits = model(x)                       # (1, 10)
+
+    probabilities = t.softmax(logits, dim=1)[0]
+    return probabilities.argmax().item(), probabilities.tolist()
+
+
+def predict_tensor(model: nn.Module, x: t.Tensor) -> tuple[int, list[float]]:
+    """
+    x: an already preprocessed batch of one, (1, channels, height, width)
+
+    Returns:
+        The predicted class index, and the probability of every class.
+    """
+    with t.inference_mode():
+        logits = model(x.to(device))
+
+    probabilities = t.softmax(logits, dim=1)[0]
+    return probabilities.argmax().item(), probabilities.tolist()
+
+
+def predict_imagenet(model: nn.Module, index: int) -> tuple[int, list[float]]:
+    """Runs one image of the Imagenette test set through a 1000-class model."""
+    return predict_tensor(model, imagenet.as_tensor(index))
+
+
+def predict_photo(model: nn.Module, data: bytes) -> tuple[int, list[float]]:
+    """Runs a photo someone picked themselves through a 1000-class model."""
+    return predict_tensor(model, imagenet.tensor_from_bytes(data))

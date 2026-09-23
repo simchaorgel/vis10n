@@ -16,14 +16,17 @@ from pathlib import Path
 
 import torch as t
 import uvicorn
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from dataloaders import cifar, imagenet
 from models import get_model
 from models import list_models as list_architectures
-from predict import load_model, predict
-from train_model import SimpleMLPTrainingArgs, device, train
+from predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
+from device import device
+from training.train_msint_mlp import SimpleMLPTrainingArgs, train
 
 ROOT = Path(__file__).parent
 WEIGHTS_DIR = ROOT / "weights"
@@ -39,6 +42,10 @@ latest_run = None
 @app.get("/")
 def index():
     return FileResponse(ROOT / "window.html")
+
+
+# Images and other files the UI loads
+app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
 
 
 # API
@@ -160,6 +167,22 @@ def list_models():
     return {"models": models}
 
 
+TEST_SETS = {"CIFAR-10": cifar, "ImageNet": imagenet}
+
+
+@app.get("/api/sample")
+def sample_image(dataset: str = "CIFAR-10", index: int | None = None):
+    """A test-set image to feed a model: random unless an index is given."""
+    if dataset not in TEST_SETS:
+        raise HTTPException(400, f"no test set for {dataset}")
+    try:
+        return TEST_SETS[dataset].sample(index)
+    except FileNotFoundError as e:
+        raise HTTPException(500, str(e))
+    except IndexError as e:
+        raise HTTPException(404, str(e))
+
+
 @app.delete("/api/models/{name}")
 def delete_model(name: str):
     """Deletes a saved model's weights and info file."""
@@ -178,7 +201,9 @@ def delete_model(name: str):
 
 class PredictRequest(BaseModel):
     model: str
-    pixels: list[list[int]]
+    dataset: str = "MNIST"
+    pixels: list[list[int]] | None = None   # MNIST: the drawing
+    index: int | None = None                # CIFAR-10: which test image
 
 
 # Last loaded model, reused until a different model is picked or its file changes
@@ -186,7 +211,8 @@ loaded = {"path": None, "mtime": None, "model": None}
 
 
 @app.post("/api/predict")
-def predict_digit(req: PredictRequest):
+def predict_image(req: PredictRequest):
+    """MNIST takes a 28x28 drawing; CIFAR-10 takes the index of a test-set image."""
     path = WEIGHTS_DIR / f"{req.model}.pt"
     info_path = path.with_suffix(".json")
     if not re.fullmatch(r"[\w\- ]+", req.model) or not path.exists():
@@ -194,21 +220,110 @@ def predict_digit(req: PredictRequest):
     if not info_path.exists():
         raise HTTPException(400, "no info file")
 
-    if len(req.pixels) != 28 or any(len(row) != 28 for row in req.pixels):
-        raise HTTPException(400, "pixels must be 28x28")
+    try:
+        info = json.loads(info_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(400, "could not read info file")
+
+    # A model only makes sense on the dataset it was trained for
+    trained_on = info.get("dataset", "MNIST")
+    if trained_on != req.dataset:
+        raise HTTPException(400, f"model predicts {trained_on}")
+
+    if req.dataset == "MNIST":
+        if not req.pixels or len(req.pixels) != 28 or any(len(row) != 28 for row in req.pixels):
+            raise HTTPException(400, "pixels must be 28x28")
+    elif req.dataset in TEST_SETS:
+        if req.index is None:
+            raise HTTPException(400, "no image chosen")
+    else:
+        raise HTTPException(400, f"cannot predict {req.dataset}")
 
     # The info file says which architecture to build before loading the weights into it
     mtime = path.stat().st_mtime
     if loaded["path"] != path or loaded["mtime"] != mtime:
         try:
-            model_name = json.loads(info_path.read_text())["model"]
-            loaded.update(path=path, mtime=mtime, model=load_model(path, model_name))
+            loaded.update(path=path, mtime=mtime, model=load_model(path, info["model"]))
         except Exception:
             traceback.print_exc()
             raise HTTPException(500, "could not load model")
 
-    digit, probabilities = predict(loaded["model"], req.pixels)
-    return {"digit": digit, "probabilities": probabilities}
+    if req.dataset == "MNIST":
+        digit, probabilities = predict(loaded["model"], req.pixels)
+        return {"label": digit, "digit": digit, "probabilities": probabilities}
+
+    runner = predict_cifar if req.dataset == "CIFAR-10" else predict_imagenet
+    try:
+        label, probabilities = runner(loaded["model"], req.index)
+        true_label, true_class = TEST_SETS[req.dataset].label(req.index)
+    except IndexError as e:
+        raise HTTPException(404, str(e))
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(500, "could not run the model on this image")
+
+    return prediction(req.dataset, label, probabilities, true_label, true_class)
+
+
+def prediction(dataset: str, label: int, probabilities: list[float],
+               true_label: int | None = None, true_class: str | None = None) -> dict:
+    """What a prediction looks like to the UI: the answer, the runners up, the truth."""
+    names = TEST_SETS[dataset].classes()
+    ranked = sorted(range(len(probabilities)), key=lambda i: probabilities[i], reverse=True)[:5]
+    return {
+        "label": label,
+        "class_name": names[label],
+        "confidence": probabilities[label],
+        "top5": [{"label": i, "class_name": names[i], "probability": probabilities[i]} for i in ranked],
+        "true_label": true_label,
+        "true_class": true_class,
+        # 1000 probabilities is a lot to send for every guess, so only the small sets get them
+        "probabilities": probabilities if len(probabilities) <= 10 else None,
+    }
+
+
+@app.post("/api/predict/photo")
+async def predict_uploaded_photo(request: Request, model: str, dataset: str = "ImageNet"):
+    """Runs a photo the user picked through a model. The body is the raw image file."""
+    path = WEIGHTS_DIR / f"{model}.pt"
+    info_path = path.with_suffix(".json")
+    if not re.fullmatch(r"[\w\- ]+", model) or not path.exists():
+        raise HTTPException(404, "model not found")
+    if not info_path.exists():
+        raise HTTPException(400, "no info file")
+
+    try:
+        info = json.loads(info_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(400, "could not read info file")
+
+    trained_on = info.get("dataset", "MNIST")
+    if trained_on != dataset:
+        raise HTTPException(400, f"model predicts {trained_on}")
+    if dataset != "ImageNet":
+        raise HTTPException(400, f"cannot send photos to a {dataset} model")
+
+    data = await request.body()
+    if not data:
+        raise HTTPException(400, "no image")
+
+    mtime = path.stat().st_mtime
+    if loaded["path"] != path or loaded["mtime"] != mtime:
+        try:
+            loaded.update(path=path, mtime=mtime, model=load_model(path, info["model"]))
+        except Exception:
+            traceback.print_exc()
+            raise HTTPException(500, "could not load model")
+
+    try:
+        label, probabilities = predict_photo(loaded["model"], data)
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(400, "could not read that image")
+
+    result = prediction(dataset, label, probabilities)
+    result["image"] = imagenet.preview_from_bytes(data)
+    return result
 
 
 class SaveRequest(BaseModel):
@@ -255,7 +370,8 @@ def model_info(name: str, description: str, run: dict) -> dict:
             "layers": {n: list(p.shape) for n, p in model.named_parameters()},
         },
 
-        "dataset": "MNIST",
+        # What the model predicts; set by the run once other datasets are trainable
+        "dataset": run.get("dataset", "MNIST"),
         "args": asdict(args),
         "batches_per_epoch": batches_per_epoch,
 
@@ -275,6 +391,90 @@ def model_info(name: str, description: str, run: dict) -> dict:
             **git_state(),
         },
     }
+
+
+def uploaded_info(name: str, model, model_name: str, dataset: str, description: str,
+                  accuracy: float | None) -> dict:
+    """Info file for weights trained elsewhere: what we were told, plus what the file shows."""
+    return {
+        "name": name,
+        "model": model_name,
+        "saved": datetime.now().isoformat(timespec="seconds"),
+        "trained": None,
+        "description": description.strip(),
+        "source": "uploaded",
+
+        "parameters": {
+            "total": sum(p.numel() for p in model.parameters()),
+            "trainable": sum(p.numel() for p in model.parameters() if p.requires_grad),
+            "layers": {n: list(p.shape) for n, p in model.named_parameters()},
+        },
+
+        "dataset": dataset,
+        "args": None,
+        "batches_per_epoch": 0,
+
+        "results": {
+            "final_accuracy": accuracy,
+            "best_accuracy": accuracy,
+            "accuracy_per_epoch": [],
+            "final_loss": None,
+            "loss_per_epoch": [],
+            "loss_per_batch": [],
+        },
+
+        "environment": {"device": str(device), "torch": t.__version__},
+    }
+
+
+@app.post("/api/upload")
+async def upload_model(
+    request: Request,
+    name: str,
+    model: str,
+    dataset: str = "MNIST",
+    description: str = "",
+    accuracy: float | None = None,
+):
+    """Saves a weights file trained elsewhere, with the details the wizard collected.
+
+    The body is the raw .pt file, so no multipart parser is needed.
+    """
+    name = name.strip()
+    if not re.fullmatch(r"[\w\- ]+", name):
+        raise HTTPException(400, "invalid name")
+    if model not in list_architectures():
+        raise HTTPException(400, f"unknown architecture {model}")
+
+    WEIGHTS_DIR.mkdir(exist_ok=True)
+    path = WEIGHTS_DIR / f"{name}.pt"
+    if path.exists():
+        raise HTTPException(400, "name already used")
+
+    # Stream the upload to disk so big files never sit in memory twice
+    partial = path.with_suffix(".part")
+    try:
+        with partial.open("wb") as f:
+            async for chunk in request.stream():
+                f.write(chunk)
+        if partial.stat().st_size == 0:
+            raise HTTPException(400, "no file")
+
+        # Loading it into the chosen architecture is the check that they match
+        try:
+            loaded_model = load_model(partial, model)
+        except Exception:
+            traceback.print_exc()
+            raise HTTPException(400, f"weights do not fit {model}")
+    except Exception:
+        partial.unlink(missing_ok=True)
+        raise
+
+    partial.rename(path)
+    info = uploaded_info(name, loaded_model, model, dataset, description, accuracy)
+    path.with_suffix(".json").write_text(json.dumps(info, indent=2))
+
+    return {"ok": True, "path": str(path.relative_to(ROOT))}
 
 
 @app.post("/api/save")

@@ -7,7 +7,7 @@
   :root {
     --line: #1f1f1f;
     --border: 4px;
-    --page: #ebe8e1;
+    --page: #35464d;
     --panel: #faf8f3;
     --text: #1f1f1f;
     --muted: #6b6760;
@@ -15,8 +15,6 @@
     --square: 224px; /* 28px * 8 */
     --btn-h: 56px;
     --label-h: 40px;
-    --shadow: 6px;
-    --shadow-colour: #3d5aa8;
   }
 
   body {
@@ -32,7 +30,6 @@
     position: absolute;
     border: var(--border) solid var(--line);
     background: var(--line);
-    box-shadow: var(--shadow) var(--shadow) 0 var(--shadow-colour);
     display: flex;
     flex-direction: column;
     gap: var(--border);
@@ -41,7 +38,8 @@
   .titlebar {
     background: #2f6fd6;
     color: #fff;
-    padding: 6px 7px 6px 10px;
+    height: 30px;
+    padding: 0 0 0 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -57,15 +55,17 @@
   }
 
   .titlebar .close {
-    width: 18px;
-    height: 18px;
+    /* The border sits outside the red, so the red stays a 30px square */
+    width: calc(30px + var(--border));
+    height: 30px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #e5401c;
-    border: 2px solid #fff;
-    border-radius: 3px;
+    border: 0;
+    border-left: var(--border) solid var(--line);
+    border-radius: 0;
   }
 
   .titlebar .close:hover {
@@ -102,19 +102,6 @@
     font-weight: 700;
   }
 
-  .square {
-    width: var(--square);
-    height: var(--square);
-    background: #fff;
-  }
-
-  canvas.square {
-    display: block;
-    image-rendering: pixelated;
-    cursor: crosshair;
-    touch-action: none;
-  }
-
   button {
     height: var(--btn-h);
     border: 0;
@@ -137,20 +124,26 @@
 
   [hidden] { display: none !important; }
 
-  /* Pixel art backdrop, drawn once at low resolution and scaled up */
-  #backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    image-rendering: pixelated;
-    pointer-events: none;
-  }
-
-  /* Launcher under the backdrop title; top is set by the backdrop script */
+  /* Launcher: title and buttons, centred on the empty page */
   .launcher {
     position: fixed;
+    top: 36%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .launcher h1 {
+    margin: 0;
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .launcher .launcher-buttons {
     display: flex;
     gap: 28px;
   }
@@ -162,27 +155,14 @@
     font-weight: 700;
     background: #fbf7ef;
     border: var(--border) solid var(--line);
-    box-shadow: var(--shadow) var(--shadow) 0 var(--shadow-colour);
-    transition: transform 0.05s, box-shadow 0.05s;
   }
 
   .launcher button:hover {
     background: #fff;
-    transform: translate(2px, 2px);
-    box-shadow: 4px 4px 0 var(--shadow-colour);
   }
 
   .launcher button:active {
-    transform: translate(var(--shadow), var(--shadow));
-    box-shadow: 0 0 0 var(--shadow-colour);
-  }
-
-  /* Model button spans the output and submit columns; long names get cut off with … */
-  #modelBtn {
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    background: var(--hover);
   }
 
   .col > .row {
@@ -191,17 +171,199 @@
     background: var(--line);
   }
 
-  #outputSquare {
+  /* Test window: equal boxes joined by connector lines */
+  /* Grid: boxes on rows 1/3/5 and columns 1/3/5, connector lines in the gaps */
+  .flow {
+    display: grid;
+    grid-template-columns: auto 34px auto 34px auto;
+    grid-template-rows: auto 34px auto 34px auto;
+    justify-items: center;
+    align-items: center;
+    background: var(--panel);
+    padding: 28px;
+  }
+
+  .at-top-left     { grid-area: 1 / 1; }
+  .at-input        { grid-area: 3 / 1; }
+  .at-under-input  { grid-area: 5 / 1; }
+  .at-model        { grid-area: 3 / 3; }
+  .at-output       { grid-area: 3 / 5; }
+  .at-under-output { grid-area: 5 / 5; }
+
+  /* The border sits outside the square, so the inside stays exactly --square:
+     224px is a whole 8x for a 28px MNIST digit and 7x for a 32px CIFAR image */
+  .flow-box {
+    box-sizing: border-box;
+    width: calc(var(--square) + var(--border) * 2);
+    height: calc(var(--square) + var(--border) * 2);
+    flex: none;
+    border: var(--border) solid var(--line);
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    color: var(--muted);
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .flow-link {
+    width: 34px;
+    height: var(--border);
+    background: var(--line);
+  }
+
+  .flow-link.down {
+    width: var(--border);
+    height: 34px;
+  }
+
+  /* clear, shuffle and submit: normal button height, full box width */
+  .flow-box.btn {
+    height: var(--btn-h);
+    width: calc(var(--square) + var(--border) * 2);
+  }
+
+  .flow-box.shuffle {
+    background: var(--panel);
+    color: var(--text);
+  }
+  .flow-box.shuffle:hover  { background: var(--hover); }
+  .flow-box.shuffle:active { background: #e3dccb; }
+
+  .flow-box.clear {
+    background: #e5401c;
+    color: #fff;
+  }
+  .flow-box.clear:hover  { background: #f25531; }
+  .flow-box.clear:active { background: #c93414; }
+
+  .flow-box.submit {
+    background: #2e9e4f;
+    color: #fff;
+  }
+  .flow-box.submit:hover  { background: #37b35b; }
+  .flow-box.submit:active { background: #268642; }
+
+  /* Model box: a plain box like the others, with the die image as its background.
+     The hover/active selectors are here to outrank the generic button hover. */
+  .model-box,
+  .model-box:hover,
+  .model-box:active {
+    position: relative;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 18px 16px;
+    background: #000 url('/assets/die.png') center / cover no-repeat;
+    color: #b9c6cd;
+    text-align: center;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
+
+  /* Scrim over the image so the text stays readable */
+  .model-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+  }
+
+  .model-box > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Nothing selected: the notice sits in the middle of the box */
+  .model-box.empty {
+    justify-content: center;
+  }
+
+  .model-box .model-name {
+    color: #f4f9fb;
+    font-size: 17px;
+  }
+
+  .model-box .model-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .model-box .model-stats b {
+    color: #8ee6b6;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  /* Part number along the bottom */
+  .model-box .model-arch {
+    color: #9fb0b8;
+    font: 600 12px/1.3 ui-monospace, Consolas, monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Output box holds the digit, with the confidence in its top-right corner */
+  .output-box {
+    position: relative;
+  }
+
+  /* CIFAR predictions are class names, so they need room to wrap */
+  .output-digit.word {
+    font-size: 34px;
+    letter-spacing: 0;
+    padding: 0 12px;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .output-digit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
     font-size: 160px;
     font-weight: 700;
     line-height: 1;
+    color: var(--text);
     font-variant-numeric: tabular-nums;
   }
-  .col.actions { width: 160px; }
-  #submitBtn { flex: 1; height: auto; }
+
+  .output-box .conf-value {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 12px;
+    margin: 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Test-set image, scaled up from 32x32 with the pixels kept crisp */
+  .flow-box img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+  }
+
+  .flow-box canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    cursor: crosshair;
+    touch-action: none;
+  }
 
   /* Training window */
   :root {
@@ -387,63 +549,97 @@
   }
 
   #saveBtn,
-  #submitBtn,
   #confirmSaveBtn {
     background: #2e9e4f;
     color: #fff;
   }
 
-  #saveBtn:hover,  #submitBtn:hover,  #confirmSaveBtn:hover  { background: #37b35b; }
-  #saveBtn:active, #submitBtn:active, #confirmSaveBtn:active { background: #268642; }
+  #saveBtn:hover,  #confirmSaveBtn:hover  { background: #37b35b; }
+  #saveBtn:active, #confirmSaveBtn:active { background: #268642; }
 
-  /* Models window: list on the left, details of the clicked model on the right */
-  .models-list-col { width: 320px; }
-  .model-details   { width: 420px; }
+  /* Models window: a box per model on the left, details of the clicked one on the right */
+  .models-col  { width: 520px; }
+  .model-details { width: 300px; }
 
-  .col > .model-list {
-    height: 512px;
+  .col > .model-grid {
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    align-content: start;
+    gap: 12px;
+    padding: 12px;
     background: var(--panel);
   }
 
-  .model-list > * {
-    flex: none;
+  .model-card {
     box-sizing: border-box;
-    border-bottom: var(--border) solid var(--line);
-  }
-
-  .model-item {
-    height: 60px;
-    padding: 0 16px;
+    height: 96px;
+    padding: 10px 12px;
+    border: var(--border) solid var(--line);
+    background: #fff;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     gap: 4px;
     text-align: left;
   }
 
-  .model-item.active,
-  .model-item.active:hover {
+  .model-card.active,
+  .model-card.active:hover {
     background: #e3dccb;
   }
 
-  .model-item-top {
+  /* The most accurate model of the listed ones wears a gradient ring: the border is
+     transparent, so the conic gradient behind it shows through only there */
+  .model-card.best,
+  .model-card.best:hover {
+    border-color: transparent;
+    background:
+      linear-gradient(#fff, #fff) padding-box,
+      conic-gradient(from 210deg, #ff5f6d, #ffc371, #7fd6a6, #2f6fd6, #a06cd5, #ff5f6d) border-box;
+  }
+
+  .model-card.best.active,
+  .model-card.best.active:hover {
+    background:
+      linear-gradient(#e3dccb, #e3dccb) padding-box,
+      conic-gradient(from 210deg, #ff5f6d, #ffc371, #7fd6a6, #2f6fd6, #a06cd5, #ff5f6d) border-box;
+  }
+
+  .model-card-top {
     display: flex;
-    align-items: center;
+    align-items: baseline;
+    gap: 6px;
     width: 100%;
     font-size: 15px;
     font-weight: 700;
   }
 
-  .model-item-acc {
+  .model-card-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .model-card-acc {
     margin-left: auto;
     color: #e5401c;
     font-variant-numeric: tabular-nums;
   }
 
-  .model-item-meta {
+  .model-card-arch {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .model-card-meta {
+    margin-top: auto;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -454,7 +650,6 @@
   }
 
   .in-use {
-    margin-left: 8px;
     padding: 2px 6px;
     background: var(--accent);
     color: #fff;
@@ -462,17 +657,18 @@
     font-weight: 700;
   }
 
-  .model-list > .empty {
+  .model-grid > .empty {
+    grid-column: 1 / -1;
     height: 60px;
     display: flex;
     align-items: center;
-    padding: 0 16px;
+    padding: 0 4px;
     color: var(--muted);
     font-weight: 600;
   }
 
   .col > .detail-desc {
-    height: 72px;
+    height: 64px;
     box-sizing: border-box;
     overflow-y: auto;
     padding: 10px 14px;
@@ -486,7 +682,7 @@
 
   .col > .stat-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: var(--border);
     background: var(--line);
   }
@@ -496,6 +692,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     padding: 0 12px;
     background: var(--panel);
     font-size: 13px;
@@ -504,27 +701,26 @@
   .stat-key { color: var(--muted); font-weight: 600; }
   .stat-val { font-weight: 700; font-variant-numeric: tabular-nums; }
 
-  #modelGraph {
-    display: block;
-    width: 420px;
-    height: 160px;
-    background: #fff;
-  }
-
   #useModelBtn {
-    flex: 1;
     background: var(--accent);
     color: #fff;
   }
 
+  /* Delete sits in the corner of the name row, quiet until you hover it */
   #deleteModelBtn {
-    width: 150px;
-    background: #e5401c;
-    color: #fff;
+    margin-left: auto;
+    height: auto;
+    padding: 2px 4px;
+    background: none;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
   }
 
-  #deleteModelBtn:hover  { background: #f25531; }
-  #deleteModelBtn:active { background: #c93414; }
+  #deleteModelBtn:hover,
+  #deleteModelBtn:active { background: none; color: #e5401c; }
+
+  #deleteModelBtn:disabled { opacity: 0.4; }
 
   #deleteModelBtn:disabled {
     background: var(--panel);
@@ -543,6 +739,43 @@
 
   /* Save window */
   .save-col { width: 380px; }
+  .load-main { width: 360px; }
+  .load-side { width: 300px; }
+
+  /* The real file input is hidden; this row is the button and the chosen file name */
+  .col > .file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px 0 0;
+    background: var(--panel);
+  }
+
+  .file-row > button { width: 150px; }
+
+  .file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .file-name.chosen { color: var(--text); }
+
+  #loadModelBtn {
+    width: 100%;
+    font-size: 15px;
+  }
+
+  #confirmLoadBtn {
+    background: #2e9e4f;
+    color: #fff;
+  }
+
+  #confirmLoadBtn:hover  { background: #37b35b; }
+  #confirmLoadBtn:active { background: #268642; }
 
   .col > .name-row,
   .col > .desc-row {
@@ -579,16 +812,19 @@
 </style>
 </head>
 <body>
-  <canvas id="backdrop"></canvas>
-
   <div class="launcher" id="launcher">
-    <button id="openTestBtn">test model</button>
-    <button id="openTrainBtn">train model</button>
+    <h1>vis10n</h1>
+    <div class="launcher-buttons">
+      <button id="openTestBtn">MNIST test</button>
+      <button id="openSetBtn">CIFAR test</button>
+      <button id="openNetBtn">IMAGENET test</button>
+      <button id="openTrainBtn">MNIST train</button>
+    </div>
   </div>
 
   <div class="window" id="mainWindow" hidden>
     <div class="titlebar">
-      <span>vis10n - test</span>
+      <span>MNIST test</span>
       <button class="close" aria-label="Close">
         <svg width="8" height="8" viewBox="0 0 8 8">
           <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
@@ -596,31 +832,106 @@
       </button>
     </div>
 
-    <div class="content">
-      <div class="col">
-        <div class="label">Input</div>
-        <canvas class="square" id="inputSquare" width="28" height="28"></canvas>
-        <button id="clearBtn">clear</button>
+    <div class="flow">
+      <button class="flow-box btn clear at-top-left" id="clearBtn">clear</button>
+      <div class="flow-link down" style="grid-area: 2 / 1"></div>
+      <div class="flow-box at-input" id="inputBox">
+        <canvas id="inputSquare" width="28" height="28"></canvas>
       </div>
 
-      <div class="col">
-        <button id="modelBtn">model: none</button>
-        <div class="row">
-          <div class="col">
-            <div class="label">Output<span class="conf-value" id="confValue"></span></div>
-            <div class="square" id="outputSquare"></div>
-          </div>
-          <div class="col actions">
-            <button id="submitBtn">submit</button>
-          </div>
-        </div>
+      <div class="flow-link" style="grid-area: 3 / 2"></div>
+      <button class="flow-box model-box at-model" id="modelBtn">
+        <span class="model-name" id="modelBoxName">select model</span>
+        <span class="model-stats" id="modelBoxStats"></span>
+        <span class="model-arch" id="modelBoxArch"></span>
+      </button>
+      <div class="flow-link" style="grid-area: 3 / 4"></div>
+
+      <div class="flow-box output-box at-output" id="outputBox">
+        <div class="output-digit" id="outputSquare"></div>
+        <span class="conf-value" id="confValue"></span>
       </div>
+      <div class="flow-link down" style="grid-area: 4 / 5"></div>
+      <button class="flow-box btn submit at-under-output" id="submitBtn">submit</button>
+    </div>
+  </div>
+
+  <div class="window" id="setWindow" hidden>
+    <div class="titlebar">
+      <span>CIFAR test</span>
+      <button class="close" aria-label="Close">
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="flow">
+      <button class="flow-box btn clear at-top-left" id="setClearBtn">clear</button>
+      <div class="flow-link down" style="grid-area: 2 / 1"></div>
+      <div class="flow-box at-input" id="setInputBox">
+        <img id="setInputImg" alt="" hidden>
+      </div>
+      <div class="flow-link down" style="grid-area: 4 / 1"></div>
+      <button class="flow-box btn shuffle at-under-input" id="setShuffleBtn">shuffle</button>
+
+      <div class="flow-link" style="grid-area: 3 / 2"></div>
+      <button class="flow-box model-box empty at-model" id="setModelBtn">
+        <span class="model-name" id="setModelName">select model</span>
+        <span class="model-stats" id="setModelStats"></span>
+        <span class="model-arch" id="setModelArch"></span>
+      </button>
+      <div class="flow-link" style="grid-area: 3 / 4"></div>
+
+      <div class="flow-box output-box at-output" id="setOutputBox">
+        <div class="output-digit word" id="setOutputDigit"></div>
+        <span class="conf-value" id="setConfValue"></span>
+      </div>
+      <div class="flow-link down" style="grid-area: 4 / 5"></div>
+      <button class="flow-box btn submit at-under-output" id="setSubmitBtn">submit</button>
+    </div>
+  </div>
+
+  <div class="window" id="netWindow" hidden>
+    <div class="titlebar">
+      <span>IMAGENET test</span>
+      <button class="close" aria-label="Close">
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="flow">
+      <input type="file" id="netFile" accept="image/*" hidden>
+      <button class="flow-box btn shuffle at-top-left" id="netChooseBtn">choose photo</button>
+      <div class="flow-link down" style="grid-area: 2 / 1"></div>
+      <div class="flow-box at-input" id="netInputBox">
+        <img id="netInputImg" alt="" hidden>
+      </div>
+      <div class="flow-link down" style="grid-area: 4 / 1"></div>
+      <button class="flow-box btn shuffle at-under-input" id="netShuffleBtn">shuffle</button>
+
+      <div class="flow-link" style="grid-area: 3 / 2"></div>
+      <button class="flow-box model-box empty at-model" id="netModelBtn">
+        <span class="model-name" id="netModelName">select model</span>
+        <span class="model-stats" id="netModelStats"></span>
+        <span class="model-arch" id="netModelArch"></span>
+      </button>
+      <div class="flow-link" style="grid-area: 3 / 4"></div>
+
+      <div class="flow-box output-box at-output" id="netOutputBox">
+        <div class="output-digit word" id="netOutputLabel"></div>
+        <span class="conf-value" id="netConfValue"></span>
+      </div>
+      <div class="flow-link down" style="grid-area: 4 / 5"></div>
+      <button class="flow-box btn submit at-under-output" id="netSubmitBtn">submit</button>
     </div>
   </div>
 
   <div class="window" id="trainWindow" hidden>
     <div class="titlebar">
-      <span>train model</span>
+      <span>MNIST train</span>
       <button class="close" aria-label="Close">
         <svg width="8" height="8" viewBox="0 0 8 8">
           <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
@@ -666,7 +977,7 @@
 
   <div class="window" id="modelsWindow" hidden>
     <div class="titlebar">
-      <span>models</span>
+      <span id="modelsTitle">models - MNIST</span>
       <button class="close" aria-label="Close">
         <svg width="8" height="8" viewBox="0 0 8 8">
           <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
@@ -675,20 +986,76 @@
     </div>
 
     <div class="content">
-      <div class="col models-list-col">
+      <div class="col models-col">
         <div class="label">Saved models</div>
-        <div class="model-list" id="modelList"></div>
+        <div class="model-grid" id="modelList"></div>
+        <button id="loadModelBtn">load weights from a file</button>
       </div>
 
       <div class="col model-details">
-        <div class="label" id="detailName">no model</div>
-        <div class="detail-desc" id="detailDesc"></div>
-        <div class="stat-grid" id="detailStats"></div>
-        <canvas id="modelGraph"></canvas>
-        <div class="row">
-          <button id="useModelBtn">use this model</button>
+        <div class="label">
+          <span id="detailName">no model</span>
           <button id="deleteModelBtn">delete</button>
         </div>
+        <div class="detail-desc" id="detailDesc"></div>
+        <div class="stat-grid" id="detailStats"></div>
+        <button id="useModelBtn">use this model</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="window" id="loadWindow" hidden>
+    <div class="titlebar">
+      <span>load model</span>
+      <button class="close" aria-label="Close">
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="content">
+      <div class="col load-main">
+        <div class="label">Weights file</div>
+        <div class="file-row">
+          <input type="file" id="loadFile" accept=".pt,.pth" hidden>
+          <button id="chooseFileBtn">choose file</button>
+          <span class="file-name" id="loadFileName">no file chosen</span>
+        </div>
+
+        <div class="label">Name</div>
+        <div class="name-row">
+          <input id="loadName" type="text" placeholder="model name" spellcheck="false">
+        </div>
+
+        <div class="label">Description</div>
+        <div class="desc-row">
+          <textarea id="loadDesc" placeholder="optional"></textarea>
+        </div>
+      </div>
+
+      <div class="col load-side">
+        <div class="label">Predicts</div>
+        <div class="select-row">
+          <select id="loadDataset">
+            <option value="MNIST">MNIST</option>
+            <option value="CIFAR-10">CIFAR-10</option>
+            <option value="ImageNet">ImageNet</option>
+          </select>
+        </div>
+
+        <div class="label">Architecture</div>
+        <div class="select-row">
+          <select id="loadArch"></select>
+        </div>
+
+        <div class="label">Accuracy, % (optional)</div>
+        <div class="name-row">
+          <input id="loadAcc" type="number" step="0.1" min="0" max="100" placeholder="e.g. 97.5">
+        </div>
+
+        <div class="filler"></div>
+        <button id="confirmLoadBtn">load model</button>
       </div>
     </div>
   </div>
@@ -719,329 +1086,78 @@
   </div>
 
 <script>
-  // Backdrop: pixel art landscape with a dithered sky gradient and faint digits in the sky
-  (() => {
-    const backdrop = document.getElementById('backdrop');
-    const bctx = backdrop.getContext('2d');
-    const PX = 6;                      // screen pixels per art pixel
-
-    // Palette
-    const SKY = ['#5b86d6', '#6f96dc', '#86a7e2', '#9fb9e7', '#bccbe9', '#d9d9e2', '#efe0cf', '#f6e2bf'];
-    const SUN_TOP = '#f6d26b', SUN_BOTTOM = '#f2a65a';
-    const CLOUD = '#fbf7ef', CLOUD_SHADE = '#e6e0d8';
-    const SNOW = '#eef0f6', FAR_MTN = '#a9b8dd', NEAR_MTN = '#8397c9';
-    const HILLS = '#7dbb84', GROUND = '#5a9c65', TREES = '#3f7d4c';
-    const TITLE_FILL = '#fbf7ef', TITLE_OUTLINE = '#1f1f1f', TITLE_SHADOW = '#3d5aa8';
-
-    // Title lettering, 5x7 like the digits
-    const TITLE = 'vis10n';
-    const LETTERS = {
-      v: ['00000', '00000', '10001', '10001', '10001', '01010', '00100'],
-      i: ['00100', '00000', '01100', '00100', '00100', '00100', '01110'],
-      s: ['00000', '00000', '01111', '10000', '01110', '00001', '11110'],
-      n: ['00000', '00000', '10110', '11001', '10001', '10001', '10001'],
-    };
-
-    // 4x4 ordered dither thresholds (0-15), used to blend sky bands pixel by pixel
-    const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
-
-    // X = cloud, S = cloud shadow
-    const CLOUD_SHAPE = [
-      '.....XXXX.......',
-      '...XXXXXXXX.XX..',
-      '.XXXXXXXXXXXXXXX',
-      'XXXXXXXXXXXXXXXX',
-      '.SSSSSSSSSSSSSS.',
-    ];
-    // [x as fraction of width, y as fraction of horizon, pixel scale]
-    const CLOUDS = [[0.06, 0.16, 3], [0.33, 0.07, 2], [0.52, 0.32, 3], [0.85, 0.10, 2], [0.2, 0.45, 2]];
-
-    const GLYPHS = [
-      ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
-      ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
-      ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
-      ['11110', '00001', '00001', '01110', '00001', '00001', '11110'],
-      ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
-      ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
-      ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
-      ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
-      ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
-      ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
-    ];
-
-    const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
-
-    // Deterministic random 0..1 for an integer + seed, so resizing doesn't reshuffle the art
-    function hash(i, seed) {
-      let h = Math.imul(i ^ Math.imul(seed, 0x9e3779b1), 0x85ebca6b);
-      h ^= h >>> 13;
-      h = Math.imul(h, 0xc2b2ae35);
-      h ^= h >>> 16;
-      return (h >>> 0) / 4294967296;
-    }
-
-    // Smooth 1D value noise, and a mountain ridge made of a few octaves of it
-    function noise(x, seed) {
-      const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
-      return hash(i, seed) * (1 - u) + hash(i + 1, seed) * u;
-    }
-
-    function ridge(x, seed) {
-      return noise(x / 40, seed) * 0.6 + noise(x / 15, seed + 1) * 0.3 + noise(x / 6, seed + 2) * 0.1;
-    }
-
-    function draw() {
-      const cols = Math.ceil(window.innerWidth / PX);
-      const rows = Math.ceil(window.innerHeight / PX);
-      backdrop.width = cols;
-      backdrop.height = rows;
-      // Exact multiples of PX so every art pixel is the same size on screen
-      backdrop.style.width = `${cols * PX}px`;
-      backdrop.style.height = `${rows * PX}px`;
-
-      const img = bctx.createImageData(cols, rows);
-      const buf = img.data;
-      const horizon = Math.round(rows * 0.62);
-
-      function set(x, y, [r, g, b]) {
-        if (x < 0 || y < 0 || x >= cols || y >= rows) return;
-        const i = (y * cols + x) * 4;
-        buf[i] = r; buf[i + 1] = g; buf[i + 2] = b; buf[i + 3] = 255;
-      }
-
-      function lighten(x, y, amount) {
-        if (x < 0 || y < 0 || x >= cols || y >= rows) return;
-        const i = (y * cols + x) * 4;
-        for (let c = 0; c < 3; c++) buf[i + c] += (255 - buf[i + c]) * amount;
-      }
-
-      function fillDown(x, top, colour) {
-        for (let y = Math.max(0, top); y < rows; y++) set(x, y, colour);
-      }
-
-      // Sky: colour bands down to the horizon, dithered into each other
-      const sky = SKY.map(rgb);
-      for (let y = 0; y < rows; y++) {
-        const t = Math.min(y / horizon, 1) * (sky.length - 1);
-        const band = Math.min(Math.floor(t), sky.length - 2);
-        const frac = t - band;
-        for (let x = 0; x < cols; x++) {
-          set(x, y, frac * 16 > BAYER[y % 4][x % 4] ? sky[band + 1] : sky[band]);
-        }
-      }
-
-      // Faint digits drifting in the sky
-      for (let sy = 0; (sy + 1) * 12 < horizon * 0.85; sy++) {
-        for (let sx = 0; sx * 11 < cols; sx++) {
-          const slot = sy * 4096 + sx;
-          if (hash(slot, 11) > 0.12) continue;
-          const glyph = GLYPHS[Math.floor(hash(slot, 12) * 10)];
-          const ox = sx * 11 + Math.floor(hash(slot, 13) * 6);
-          const oy = sy * 12 + Math.floor(hash(slot, 14) * 5);
-          glyph.forEach((line, gy) => {
-            for (let gx = 0; gx < 5; gx++) {
-              if (line[gx] === '1') lighten(ox + gx, oy + gy, 0.22);
-            }
-          });
-        }
-      }
-
-      // Clouds
-      const cloud = rgb(CLOUD), cloudShade = rgb(CLOUD_SHADE);
-      for (const [fx, fy, s] of CLOUDS) {
-        const ox = Math.round(fx * cols), oy = Math.round(fy * horizon);
-        CLOUD_SHAPE.forEach((line, cy) => {
-          [...line].forEach((ch, cx) => {
-            if (ch === '.') return;
-            for (let py = 0; py < s; py++) {
-              for (let px = 0; px < s; px++) {
-                set(ox + cx * s + px, oy + cy * s + py, ch === 'X' ? cloud : cloudShade);
-              }
-            }
-          });
-        });
-      }
-
-      // Sun, sinking behind the mountains, with retro gaps in its lower half
-      const sunR = Math.round(Math.min(cols, rows) * 0.16);
-      const sunX = Math.round(cols * 0.7), sunY = horizon - Math.round(sunR * 0.3);
-      const sunTop = rgb(SUN_TOP), sunBottom = rgb(SUN_BOTTOM);
-      for (let dy = -sunR; dy <= sunR; dy++) {
-        if (dy > 0 && dy % 6 < Math.floor((dy / sunR) * 5)) continue;
-        for (let dx = -sunR; dx <= sunR; dx++) {
-          if (dx * dx + dy * dy <= sunR * sunR) set(sunX + dx, sunY + dy, dy < 0 ? sunTop : sunBottom);
-        }
-      }
-
-      // Far mountains with snowy peaks
-      const far = rgb(FAR_MTN), snow = rgb(SNOW);
-      for (let x = 0; x < cols; x++) {
-        const top = horizon - Math.round(rows * 0.04 + ridge(x, 1) * rows * 0.26);
-        fillDown(x, top, far);
-        if (top < horizon - rows * 0.2) {
-          for (let y = top; y < top + 3; y++) set(x, y, snow);
-        }
-      }
-
-      // Near mountains
-      const near = rgb(NEAR_MTN);
-      for (let x = 0; x < cols; x++) {
-        fillDown(x, horizon + Math.round(rows * 0.03 - ridge(x * 1.3, 5) * rows * 0.18), near);
-      }
-
-      // Title: big blocky letters centred on screen, in front of the mountains,
-      // black outline like the windows, blue drop shadow
-      const scale = Math.max(2, Math.round(rows / 45));
-      const shadowOffset = Math.max(1, Math.floor(scale / 2)) + 1;
-      const titleW = (TITLE.length * 6 - 1) * scale;
-      const titleH = 7 * scale;
-      // Centre on the visible screen (the canvas can run a few pixels past it), shadow included
-      const titleX = Math.round((window.innerWidth / PX - titleW - shadowOffset) / 2);
-      const titleY = Math.round(window.innerHeight / PX * 0.36 - (titleH + shadowOffset) / 2);
-
-      // Launcher buttons sit just under the title
-      document.getElementById('launcher').style.top = `${(titleY + titleH + shadowOffset) * PX + 32}px`;
-      const mask = new Uint8Array(cols * rows);
-      [...TITLE].forEach((ch, n) => {
-        const glyph = LETTERS[ch] || GLYPHS[Number(ch)];
-        glyph.forEach((line, gy) => {
-          for (let gx = 0; gx < 5; gx++) {
-            if (line[gx] !== '1') continue;
-            for (let py = 0; py < scale; py++) {
-              for (let px = 0; px < scale; px++) {
-                const x = titleX + (n * 6 + gx) * scale + px, y = titleY + gy * scale + py;
-                if (x >= 0 && y >= 0 && x < cols && y < rows) mask[y * cols + x] = 1;
-              }
-            }
-          }
-        });
-      });
-
-      const titleFill = rgb(TITLE_FILL), titleOutline = rgb(TITLE_OUTLINE), titleShadow = rgb(TITLE_SHADOW);
-      const inMask = (x, y) => x >= 0 && y >= 0 && x < cols && y < rows && mask[y * cols + x];
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          if (!inMask(x, y)) continue;
-          // Shadow first, then a 1px outline around the letters, then the fill on top
-          for (let s = 1; s <= shadowOffset; s++) set(x + s, y + s, titleShadow);
-        }
-      }
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          if (!inMask(x, y)) continue;
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (!inMask(x + dx, y + dy)) set(x + dx, y + dy, titleOutline);
-            }
-          }
-        }
-      }
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          if (inMask(x, y)) set(x, y, titleFill);
-        }
-      }
-
-      // Rolling hills with pixel pine trees
-      const hills = rgb(HILLS), trees = rgb(TREES);
-      const hillTops = [];
-      for (let x = 0; x < cols; x++) {
-        const wave = Math.sin((x / cols) * Math.PI * 3 + 0.8) * 0.5 + 0.5;
-        hillTops[x] = Math.round(rows * 0.8 - wave * rows * 0.05 - noise(x / 25, 9) * rows * 0.03);
-        fillDown(x, hillTops[x], hills);
-      }
-      for (let x = 2; x < cols - 2; x++) {
-        if (hash(x, 21) > 0.07) continue;
-        const base = hillTops[x] + 1;
-        for (let ty = 0; ty < 7; ty++) {
-          const w = Math.floor(ty / 2);
-          for (let dx = -w; dx <= w; dx++) set(x + dx, base - 8 + ty, trees);
-        }
-        set(x, base - 1, trees);
-      }
-
-      // Foreground ground
-      const ground = rgb(GROUND);
-      for (let x = 0; x < cols; x++) {
-        const wave = Math.sin((x / cols) * Math.PI * 2 + 2.1) * 0.5 + 0.5;
-        fillDown(x, Math.round(rows * 0.9 - wave * rows * 0.04), ground);
-      }
-
-      bctx.putImageData(img, 0, 0);
-    }
-
-    draw();
-    let resizeTimer;
-    window.addEventListener('resize', () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(draw, 100);
-    });
-  })();
-
   const SIZE = 28;
-  const input = document.getElementById('inputSquare');
-  const ctx = input.getContext('2d');
 
-  function clearInput() {
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, SIZE, SIZE);
-    ctx.fillStyle = '#000';
-  }
+  // Drawing on a 28x28 canvas; used by every window that takes a digit
+  function setupDrawing(canvas) {
+    const cctx = canvas.getContext('2d');
 
-  clearInput();
-  document.getElementById('clearBtn').addEventListener('click', clearInput);
-
-  let drawing = false;
-  let last = null;
-
-  // 2px strokes are closest to MNIST's stroke thickness
-  const brushSize = 2;
-
-  function toPixel(e) {
-    const rect = input.getBoundingClientRect();
-    return {
-      x: Math.floor((e.clientX - rect.left) / rect.width * SIZE),
-      y: Math.floor((e.clientY - rect.top) / rect.height * SIZE),
-    };
-  }
-
-  // Bresenham line so fast drags don't leave gaps between pixels
-  function drawLine(a, b) {
-    let { x, y } = a;
-    const dx = Math.abs(b.x - x), dy = -Math.abs(b.y - y);
-    const sx = x < b.x ? 1 : -1, sy = y < b.y ? 1 : -1;
-    let err = dx + dy;
-    const shift = Math.floor((brushSize - 1) / 2);
-    while (true) {
-      ctx.fillRect(x - shift, y - shift, brushSize, brushSize);
-      if (x === b.x && y === b.y) break;
-      const e2 = 2 * err;
-      if (e2 >= dy) { err += dy; x += sx; }
-      if (e2 <= dx) { err += dx; y += sy; }
+    function clear() {
+      cctx.fillStyle = '#fff';
+      cctx.fillRect(0, 0, SIZE, SIZE);
+      cctx.fillStyle = '#000';
     }
+
+    clear();
+
+    let drawing = false;
+    let last = null;
+
+    // 2px strokes are closest to MNIST's stroke thickness
+    const brushSize = 2;
+
+    function toPixel(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: Math.floor((e.clientX - rect.left) / rect.width * SIZE),
+        y: Math.floor((e.clientY - rect.top) / rect.height * SIZE),
+      };
+    }
+
+    // Bresenham line so fast drags don't leave gaps between pixels
+    function drawLine(a, b) {
+      let { x, y } = a;
+      const dx = Math.abs(b.x - x), dy = -Math.abs(b.y - y);
+      const sx = x < b.x ? 1 : -1, sy = y < b.y ? 1 : -1;
+      let err = dx + dy;
+      const shift = Math.floor((brushSize - 1) / 2);
+      while (true) {
+        cctx.fillRect(x - shift, y - shift, brushSize, brushSize);
+        if (x === b.x && y === b.y) break;
+        const e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x += sx; }
+        if (e2 <= dx) { err += dx; y += sy; }
+      }
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      drawing = true;
+      canvas.setPointerCapture(e.pointerId);
+      last = toPixel(e);
+      drawLine(last, last);
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!drawing) return;
+      const p = toPixel(e);
+      drawLine(last, p);
+      last = p;
+    });
+
+    function stop() {
+      drawing = false;
+      last = null;
+    }
+
+    canvas.addEventListener('pointerup', stop);
+    canvas.addEventListener('pointercancel', stop);
+
+    return { ctx: cctx, clear };
   }
 
-  input.addEventListener('pointerdown', e => {
-    drawing = true;
-    input.setPointerCapture(e.pointerId);
-    last = toPixel(e);
-    drawLine(last, last);
-  });
-
-  input.addEventListener('pointermove', e => {
-    if (!drawing) return;
-    const p = toPixel(e);
-    drawLine(last, p);
-    last = p;
-  });
-
-  function stop() {
-    drawing = false;
-    last = null;
-  }
-
-  input.addEventListener('pointerup', stop);
-  input.addEventListener('pointercancel', stop);
+  const input = document.getElementById('inputSquare');
+  const { ctx, clear: clearInput } = setupDrawing(input);
+  document.getElementById('clearBtn').addEventListener('click', clearInput);
 
   // Training args: add a line here to get a new input
   const TRAIN_ARGS = [
@@ -1072,17 +1188,20 @@
   // Architecture picker: filled from the files in models/, keeping the current choice if it still exists
   const archSelect = document.getElementById('archSelect');
 
-  async function refreshArchitectures() {
+  async function refreshArchitectures(...selects) {
+    const targets = selects.length ? selects : [archSelect];
     try {
       const res = await fetch('/api/architectures');
       const { architectures } = await res.json();
-      const current = archSelect.value;
-      archSelect.replaceChildren(...architectures.map(arch => {
-        const option = new Option(arch.name, arch.name);
-        option.title = arch.description;
-        return option;
-      }));
-      if (architectures.some(arch => arch.name === current)) archSelect.value = current;
+      for (const select of targets) {
+        const current = select.value;
+        select.replaceChildren(...architectures.map(arch => {
+          const option = new Option(arch.name, arch.name);
+          option.title = arch.description;
+          return option;
+        }));
+        if (architectures.some(arch => arch.name === current)) select.value = current;
+      }
     } catch (err) {
       console.error('could not load architectures:', err);
     }
@@ -1341,7 +1460,6 @@
 
   // Windows: drag by title bar, close with the x, clicked window comes to the front
   let topZ = 1;
-  const WINDOW_SHADOW = 6; // matches --shadow
 
   function makeWindow(win) {
     const titlebar = win.querySelector('.titlebar');
@@ -1352,9 +1470,8 @@
     function place(x, y) {
       const rect = win.getBoundingClientRect();
       const page = document.documentElement;
-      // Leave room for the drop shadow on the right and bottom
-      const maxX = Math.floor(page.clientWidth - Math.ceil(rect.width) - WINDOW_SHADOW);
-      const maxY = Math.floor(page.clientHeight - Math.ceil(rect.height) - WINDOW_SHADOW);
+      const maxX = Math.floor(page.clientWidth - Math.ceil(rect.width));
+      const maxY = Math.floor(page.clientHeight - Math.ceil(rect.height));
       win.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
       win.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
     }
@@ -1414,70 +1531,337 @@
 
   const mainWindow = makeWindow(document.getElementById('mainWindow'));
   const trainWindow = makeWindow(document.getElementById('trainWindow'));
+  const setWindow = makeWindow(document.getElementById('setWindow'));
+  const netWindow = makeWindow(document.getElementById('netWindow'));
 
   document.getElementById('openTestBtn').addEventListener('click', mainWindow.open);
+  document.getElementById('openSetBtn').addEventListener('click', setWindow.open);
+  document.getElementById('openNetBtn').addEventListener('click', netWindow.open);
   document.getElementById('openTrainBtn').addEventListener('click', async () => {
     await refreshArchitectures();
     trainWindow.open();
   });
 
+  // Test set window: shuffle pulls a random image out of the CIFAR-10 test set.
+  // The index comes back with it, so the server can be asked about the same image later.
+  const setInputImg = document.getElementById('setInputImg');
+  const setShuffleBtn = document.getElementById('setShuffleBtn');
+  let setSample = null;
+
+  function clearSetInput() {
+    setSample = null;
+    setInputImg.removeAttribute('src');
+    setInputImg.hidden = true;
+  }
+
+  function flashShuffle(text) {
+    setShuffleBtn.textContent = text;
+    setTimeout(() => { setShuffleBtn.textContent = 'shuffle'; }, 1500);
+  }
+
+  // Returns whether a new image is on screen, so enter can shuffle and then submit
+  async function shuffleSet() {
+    try {
+      const res = await fetch('/api/sample?dataset=CIFAR-10');
+      const data = await res.json();
+      if (!res.ok) {
+        flashShuffle(typeof data.detail === 'string' ? data.detail : 'failed');
+        return false;
+      }
+      setSample = data;
+      setInputImg.src = data.image;
+      setInputImg.hidden = false;
+      clearSetOutput();
+      return true;
+    } catch (err) {
+      console.error('could not load a test image:', err);
+      flashShuffle('failed');
+      return false;
+    }
+  }
+
+  setShuffleBtn.addEventListener('click', shuffleSet);
+
+  const setOutputDigit = document.getElementById('setOutputDigit');
+  const setConfValue = document.getElementById('setConfValue');
+  const setSubmitBtn = document.getElementById('setSubmitBtn');
+
+  function clearSetOutput() {
+    setOutputDigit.textContent = '';
+    setConfValue.textContent = '';
+  }
+
+  document.getElementById('setClearBtn').addEventListener('click', () => {
+    clearSetInput();
+    clearSetOutput();
+  });
+
+  function flashSetSubmit(text) {
+    setSubmitBtn.textContent = text;
+    setTimeout(() => { setSubmitBtn.textContent = 'submit'; }, 1500);
+  }
+
+  // Only the image's index goes to the server, which reads the pixels out of the test set itself
+  let setPredictRequest = 0;
+
+  async function submitSet() {
+    if (!selected['CIFAR-10']) return flashSetSubmit('pick a model');
+    if (!setSample) return flashSetSubmit('shuffle first');
+
+    const id = ++setPredictRequest;
+    setOutputDigit.innerHTML = '<div class="spinner"></div>';
+    setConfValue.textContent = '';
+
+    try {
+      const res = await fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: selected['CIFAR-10'], dataset: 'CIFAR-10', index: setSample.index }),
+      });
+      const data = await res.json();
+      if (id !== setPredictRequest) return;
+
+      if (!res.ok) {
+        clearSetOutput();
+        flashSetSubmit(typeof data.detail === 'string' ? data.detail : 'failed');
+        return;
+      }
+      setOutputDigit.textContent = data.class_name;
+      setConfValue.textContent = `${(data.probabilities[data.label] * 100).toFixed(1)}%`;
+    } catch (err) {
+      if (id !== setPredictRequest) return;
+      console.error('predict failed:', err);
+      clearSetOutput();
+      flashSetSubmit('failed');
+    }
+  }
+
+  setSubmitBtn.addEventListener('click', submitSet);
+
+  // ImageNet window: shuffle takes a photo from the Imagenette test set (10 of the 1000
+  // classes, with labels); choose photo runs any image the user picks, which has no label.
+  const netInputImg = document.getElementById('netInputImg');
+  const netFile = document.getElementById('netFile');
+  const netShuffleBtn = document.getElementById('netShuffleBtn');
+  const netSubmitBtn = document.getElementById('netSubmitBtn');
+  const netOutputLabel = document.getElementById('netOutputLabel');
+  const netConfValue = document.getElementById('netConfValue');
+  let netSample = null;   // { index } for a test image, or { file } for a chosen photo
+
+  function clearNetOutput() {
+    netOutputLabel.textContent = '';
+    netConfValue.textContent = '';
+  }
+
+  function showNetImage(src) {
+    netInputImg.src = src;
+    netInputImg.hidden = false;
+    clearNetOutput();
+  }
+
+  function flashNet(button, text, original) {
+    button.textContent = text;
+    setTimeout(() => { button.textContent = original; }, 1500);
+  }
+
+  async function shuffleNet() {
+    try {
+      const res = await fetch('/api/sample?dataset=ImageNet');
+      const data = await res.json();
+      if (!res.ok) {
+        flashNet(netShuffleBtn, typeof data.detail === 'string' ? data.detail : 'failed', 'shuffle');
+        return false;
+      }
+      netSample = { index: data.index, trueClass: data.class_name };
+      showNetImage(data.image);
+      return true;
+    } catch (err) {
+      console.error('could not load a test image:', err);
+      flashNet(netShuffleBtn, 'failed', 'shuffle');
+      return false;
+    }
+  }
+
+  netShuffleBtn.addEventListener('click', shuffleNet);
+
+  document.getElementById('netChooseBtn').addEventListener('click', () => netFile.click());
+
+  netFile.addEventListener('change', () => {
+    const file = netFile.files[0];
+    if (!file) return;
+    netSample = { file };
+    // Shown from the file until the server sends back how it actually cropped it
+    showNetImage(URL.createObjectURL(file));
+  });
+
+  let netPredictRequest = 0;
+
+  async function submitNet() {
+    if (!selected['ImageNet']) return flashNet(netSubmitBtn, 'pick a model', 'submit');
+    if (!netSample) return flashNet(netSubmitBtn, 'shuffle first', 'submit');
+
+    const id = ++netPredictRequest;
+    netOutputLabel.innerHTML = '<div class="spinner"></div>';
+    netConfValue.textContent = '';
+
+    try {
+      const model = encodeURIComponent(selected['ImageNet']);
+      const res = netSample.file
+        ? await fetch(`/api/predict/photo?model=${model}&dataset=ImageNet`,
+            { method: 'POST', body: netSample.file })
+        : await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: selected['ImageNet'], dataset: 'ImageNet', index: netSample.index }),
+          });
+      const data = await res.json();
+      if (id !== netPredictRequest) return;
+
+      if (!res.ok) {
+        clearNetOutput();
+        flashNet(netSubmitBtn, typeof data.detail === 'string' ? data.detail : 'failed', 'submit');
+        return;
+      }
+      netOutputLabel.textContent = data.class_name;
+      netConfValue.textContent = `${(data.confidence * 100).toFixed(1)}%`;
+      // The server crops a chosen photo, so show what the model actually saw
+      if (data.image) netInputImg.src = data.image;
+    } catch (err) {
+      if (id !== netPredictRequest) return;
+      console.error('predict failed:', err);
+      clearNetOutput();
+      flashNet(netSubmitBtn, 'failed', 'submit');
+    }
+  }
+
+  netSubmitBtn.addEventListener('click', submitNet);
+
+  // Keyboard, in whichever test window is in front: space shuffles and then submits,
+  // so a rhythm on space walks through the test set; enter submits what is on screen
+  const keyedWindows = [
+    { el: document.getElementById('setWindow'), shuffle: shuffleSet, submit: submitSet },
+    { el: document.getElementById('netWindow'), shuffle: shuffleNet, submit: submitNet },
+  ];
+
+  function windowInFront() {
+    const open = [...document.querySelectorAll('.window')].filter(win => !win.hidden);
+    const front = open.sort((a, b) => (Number(a.style.zIndex) || 0) - (Number(b.style.zIndex) || 0)).pop();
+    return keyedWindows.find(w => w.el === front) ?? null;
+  }
+
+  document.addEventListener('keydown', async e => {
+    if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+    // Never steal keys from a text field
+    if (e.target.closest('input, textarea, select')) return;
+    const target = windowInFront();
+    if (!target) return;
+
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (await target.shuffle()) target.submit();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      target.submit();
+    }
+  });
+
   // Models window: list of saved models; clicking one shows its details, "use this model" selects it
   const modelsWindow = makeWindow(document.getElementById('modelsWindow'));
-  const modelBtn = document.getElementById('modelBtn');
+  // Each test window has its own model box and its own selected model
+  const modelBoxes = {
+    'MNIST': {
+      btn: document.getElementById('modelBtn'),
+      name: document.getElementById('modelBoxName'),
+      stats: document.getElementById('modelBoxStats'),
+      arch: document.getElementById('modelBoxArch'),
+    },
+    'CIFAR-10': {
+      btn: document.getElementById('setModelBtn'),
+      name: document.getElementById('setModelName'),
+      stats: document.getElementById('setModelStats'),
+      arch: document.getElementById('setModelArch'),
+    },
+    'ImageNet': {
+      btn: document.getElementById('netModelBtn'),
+      name: document.getElementById('netModelName'),
+      stats: document.getElementById('netModelStats'),
+      arch: document.getElementById('netModelArch'),
+    },
+  };
   const modelList = document.getElementById('modelList');
   const detailName = document.getElementById('detailName');
   const detailDesc = document.getElementById('detailDesc');
   const detailStats = document.getElementById('detailStats');
   const useModelBtn = document.getElementById('useModelBtn');
-  const modelGraph = setupGraph(document.getElementById('modelGraph'), 420, 160);
+  const modelsTitle = document.getElementById('modelsTitle');
 
   let models = [];            // [{ name, info }] from the server; info is null for older models
   let viewedModel = null;     // clicked in the list
-  let selectedModel = null;   // used for predictions
+  const selected = { 'MNIST': null, 'CIFAR-10': null, 'ImageNet': null };  // per dataset
+  let pickerDataset = 'MNIST';  // what the window was opened for; only these models are listed
+
+  // Models saved before the dataset was recorded are all MNIST
+  const datasetOf = model => model.info?.dataset ?? 'MNIST';
+  const shownModels = () => models.filter(model => datasetOf(model) === pickerDataset);
 
   const pct = v => (v == null ? null : `${(v * 100).toFixed(1)}%`);
   const num = v => (v == null ? null : Number(v).toLocaleString());
   const compact = v => (v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${v}`);
 
+  // One box per model: name, accuracy, architecture and a line of basic numbers
   function renderModelList() {
+    const listed = shownModels();
     modelList.replaceChildren();
-    if (!models.length) {
+    if (!listed.length) {
       const empty = document.createElement('div');
       empty.className = 'empty';
-      empty.textContent = 'no saved models';
+      empty.textContent = `no saved ${pickerDataset} models`;
       modelList.append(empty);
       return;
     }
 
-    for (const model of models) {
+    // Whichever listed model scored highest gets the ring
+    const accuracyOf = m => m.info?.results?.final_accuracy ?? -1;
+    const best = listed.reduce((a, b) => (accuracyOf(b) > accuracyOf(a) ? b : a));
+    const bestName = accuracyOf(best) > 0 ? best.name : null;
+
+    for (const model of listed) {
       const { name, info } = model;
-      const item = document.createElement('button');
-      item.className = 'model-item';
-      item.classList.toggle('active', name === viewedModel);
+      const card = document.createElement('button');
+      card.className = 'model-card';
+      card.classList.toggle('active', name === viewedModel);
+      card.classList.toggle('best', name === bestName);
 
       const top = document.createElement('span');
-      top.className = 'model-item-top';
-      top.append(name);
-      if (name === selectedModel) {
+      top.className = 'model-card-top';
+      const label = document.createElement('span');
+      label.className = 'model-card-name';
+      label.textContent = name;
+      top.append(label);
+      if (name === selected[pickerDataset]) {
         const tag = document.createElement('span');
         tag.className = 'in-use';
         tag.textContent = 'in use';
         top.append(tag);
       }
       const acc = document.createElement('span');
-      acc.className = 'model-item-acc';
+      acc.className = 'model-card-acc';
       acc.textContent = pct(info?.results?.final_accuracy) ?? '';
       top.append(acc);
 
+      const arch = document.createElement('span');
+      arch.className = 'model-card-arch';
+      arch.textContent = info?.model ?? '';
+
       const meta = document.createElement('span');
-      meta.className = 'model-item-meta';
+      meta.className = 'model-card-meta';
       meta.textContent = info?.args
-        ? `${info.model} · ${info.args.epochs} ep · ${compact(info.args.trainset_size)} imgs · ${compact(info.parameters?.total ?? 0)} params`
+        ? `${info.args.epochs} ep · ${compact(info.args.trainset_size)} imgs · ${compact(info.parameters?.total ?? 0)} params`
         : 'no info saved';
 
-      item.append(top, meta);
-      item.addEventListener('click', () => viewModel(name));
-      modelList.append(item);
+      card.append(top, arch, meta);
+      card.addEventListener('click', () => viewModel(name));
+      modelList.append(card);
     }
   }
 
@@ -1492,6 +1876,7 @@
     detailDesc.classList.toggle('none', !info?.description);
 
     const stats = [
+      ['predicts', info ? datasetOf(model) : null],
       ['final acc', pct(results?.final_accuracy)],
       ['best acc', pct(results?.best_accuracy)],
       ['final loss', results?.final_loss?.toFixed(3)],
@@ -1517,15 +1902,9 @@
       return cell;
     }));
 
-    drawGraph(results ? {
-      loss: results.loss_per_batch ?? [],
-      accuracy: results.accuracy_per_epoch ?? [],
-      batchesPerEpoch: info.batches_per_epoch ?? 0,
-      epochs: args?.epochs ?? 0,
-    } : {}, modelGraph);
-
-    useModelBtn.disabled = !model || model.name === selectedModel;
-    useModelBtn.textContent = model && model.name === selectedModel ? 'in use' : 'use this model';
+    const inUse = model && model.name === selected[pickerDataset];
+    useModelBtn.disabled = !model || inUse;
+    useModelBtn.textContent = inUse ? 'in use' : 'use this model';
     resetDelete();
     deleteModelBtn.disabled = !model;
   }
@@ -1565,13 +1944,42 @@
       return;
     }
 
-    if (name === selectedModel) {
-      selectedModel = null;
-      modelBtn.textContent = 'model: none';
+    for (const dataset of Object.keys(selected)) {
+      if (selected[dataset] === name) {
+        selected[dataset] = null;
+        renderModelBox(dataset);
+      }
     }
     viewedModel = null;
     await refreshModels();
   });
+
+  // The model box doubles as the picker: what is selected for that dataset, with a few stats
+  function renderModelBox(dataset) {
+    const box = modelBoxes[dataset];
+    const name = selected[dataset];
+    const info = models.find(m => m.name === name)?.info;
+
+    box.name.textContent = name ?? 'select model';
+    box.btn.classList.toggle('empty', !name);
+    box.arch.textContent = info?.model ?? '';
+
+    const acc = pct(info?.results?.final_accuracy);
+    const params = info?.parameters?.total;
+    box.stats.replaceChildren();
+    if (acc) {
+      const value = document.createElement('b');
+      value.textContent = acc;
+      const line = document.createElement('span');
+      line.append(value, ' accuracy');
+      box.stats.append(line);
+    }
+    if (params != null) {
+      const line = document.createElement('span');
+      line.textContent = `${num(params)} weights`;
+      box.stats.append(line);
+    }
+  }
 
   function viewModel(name) {
     viewedModel = name;
@@ -1581,8 +1989,8 @@
 
   useModelBtn.addEventListener('click', () => {
     if (!viewedModel) return;
-    selectedModel = viewedModel;
-    modelBtn.textContent = `model: ${selectedModel}`;
+    selected[pickerDataset] = viewedModel;
+    renderModelBox(pickerDataset);
     modelsWindow.close();
   });
 
@@ -1594,14 +2002,104 @@
       console.error('could not load models:', err);
       models = [];
     }
-    // Show the model in use if there is one, otherwise the first
-    const names = models.map(m => m.name);
-    viewModel(names.includes(selectedModel) ? selectedModel : names[0] ?? null);
+    // Show the model in use if there is one, otherwise the first of this dataset
+    const names = shownModels().map(m => m.name);
+    const inUse = selected[pickerDataset];
+    viewModel(names.includes(inUse) ? inUse : names[0] ?? null);
+    for (const dataset of Object.keys(selected)) renderModelBox(dataset);
   }
 
-  modelBtn.addEventListener('click', async () => {
+  // Opened for one dataset at a time; the test windows predict digits, so MNIST
+  async function openModelPicker(dataset) {
+    pickerDataset = dataset;
+    modelsTitle.textContent = `models - ${dataset}`;
     await refreshModels();
     modelsWindow.open();
+  }
+
+  modelBoxes['MNIST'].btn.addEventListener('click', () => openModelPicker('MNIST'));
+  modelBoxes['CIFAR-10'].btn.addEventListener('click', () => openModelPicker('CIFAR-10'));
+  modelBoxes['ImageNet'].btn.addEventListener('click', () => openModelPicker('ImageNet'));
+
+  // Load window: takes a weights file trained elsewhere plus the details we can't read
+  // off it, and hands both to the server
+  const loadWindow = makeWindow(document.getElementById('loadWindow'));
+  const loadFile = document.getElementById('loadFile');
+  const loadFileName = document.getElementById('loadFileName');
+  const loadNameInput = document.getElementById('loadName');
+  const loadDataset = document.getElementById('loadDataset');
+  const loadArch = document.getElementById('loadArch');
+  const loadAcc = document.getElementById('loadAcc');
+  const loadDesc = document.getElementById('loadDesc');
+  const confirmLoadBtn = document.getElementById('confirmLoadBtn');
+
+  document.getElementById('chooseFileBtn').addEventListener('click', () => loadFile.click());
+
+  loadFile.addEventListener('change', () => {
+    const file = loadFile.files[0];
+    loadFileName.textContent = file ? file.name : 'no file chosen';
+    loadFileName.classList.toggle('chosen', !!file);
+    // The file name is a sensible default for the model name
+    if (file && !loadNameInput.value.trim()) {
+      loadNameInput.value = file.name.replace(/\.(pt|pth)$/i, '').replace(/[^\w\- ]+/g, '-');
+    }
+  });
+
+  document.getElementById('loadModelBtn').addEventListener('click', async () => {
+    loadDataset.value = pickerDataset;
+    await refreshArchitectures(loadArch);
+    loadWindow.open();
+    loadNameInput.focus();
+  });
+
+  function flashLoad(text) {
+    confirmLoadBtn.textContent = text;
+    setTimeout(() => { confirmLoadBtn.textContent = 'load model'; }, 2000);
+  }
+
+  async function uploadModel() {
+    const file = loadFile.files[0];
+    if (!file) return flashLoad('pick a file');
+    if (!loadNameInput.value.trim()) return flashLoad('name it first');
+    if (!loadArch.value) return flashLoad('pick an architecture');
+
+    const params = new URLSearchParams({
+      name: loadNameInput.value.trim(),
+      model: loadArch.value,
+      dataset: loadDataset.value,
+      description: loadDesc.value,
+    });
+    // Accuracy is stored as a fraction, like the trained models write it
+    const accuracy = parseFloat(loadAcc.value);
+    if (Number.isFinite(accuracy)) params.set('accuracy', `${accuracy / 100}`);
+
+    confirmLoadBtn.textContent = 'loading...';
+    try {
+      const res = await fetch(`/api/upload?${params}`, { method: 'POST', body: file });
+      const data = await res.json();
+      if (!res.ok) {
+        flashLoad(typeof data.detail === 'string' ? data.detail : 'failed');
+        return;
+      }
+      console.log('loaded model into', data.path);
+      loadFile.value = '';
+      loadFileName.textContent = 'no file chosen';
+      loadFileName.classList.remove('chosen');
+      loadNameInput.value = '';
+      loadAcc.value = '';
+      loadDesc.value = '';
+      confirmLoadBtn.textContent = 'load model';
+      loadWindow.close();
+      await refreshModels();
+    } catch (err) {
+      console.error('upload failed:', err);
+      flashLoad('failed');
+    }
+  }
+
+  confirmLoadBtn.addEventListener('click', uploadModel);
+  loadNameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') uploadModel();
   });
 
   // Save window: asks for a name and description, then saves the last trained model
@@ -1672,7 +2170,7 @@
   let predictRequest = 0;
 
   submitBtn.addEventListener('click', async () => {
-    if (!selectedModel) {
+    if (!selected['MNIST']) {
       flashSubmit('pick a model');
       return;
     }
@@ -1686,7 +2184,7 @@
       const res = await fetch('/api/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: selectedModel, pixels: readPixels() }),
+        body: JSON.stringify({ model: selected['MNIST'], dataset: 'MNIST', pixels: readPixels() }),
       });
       const data = await res.json();
       if (id !== predictRequest) return;
@@ -1696,7 +2194,7 @@
         flashSubmit(typeof data.detail === 'string' ? data.detail : 'failed');
         return;
       }
-      outputSquare.textContent = data.digit;
+      outputSquare.textContent = data.label;
       confValue.textContent = `${(data.probabilities[data.digit] * 100).toFixed(1)}%`;
     } catch (err) {
       if (id !== predictRequest) return;

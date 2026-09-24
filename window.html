@@ -416,10 +416,13 @@
     background: #e5401c;
   }
 
+  /* The graph soaks up any spare height, so the column always ends flush with the
+     args column however many rows that has */
   #graph {
     display: block;
     width: 520px;
-    height: 300px;
+    flex: 1 1 0;
+    min-height: 300px;
     background: #fff;
   }
 
@@ -968,6 +971,10 @@
         <div class="select-row">
           <select id="archSelect"></select>
         </div>
+        <div class="label">Optimizer</div>
+        <div class="select-row">
+          <select id="optimizerSelect"></select>
+        </div>
         <div class="label">Args</div>
         <div class="filler"></div>
         <button id="saveBtn">save model</button>
@@ -1180,13 +1187,14 @@
   }
 
   function readArgs() {
-    return Object.fromEntries(TRAIN_ARGS.map(arg =>
+    return Object.assign({ optimizer: optimizerSelect.value }, Object.fromEntries(TRAIN_ARGS.map(arg =>
       [arg.name, Number(document.getElementById(`arg-${arg.name}`).value)]
-    ));
+    )));
   }
 
   // Architecture picker: filled from the files in models/, keeping the current choice if it still exists
   const archSelect = document.getElementById('archSelect');
+  const optimizerSelect = document.getElementById('optimizerSelect');
 
   async function refreshArchitectures(...selects) {
     const targets = selects.length ? selects : [archSelect];
@@ -1204,6 +1212,18 @@
       }
     } catch (err) {
       console.error('could not load architectures:', err);
+    }
+  }
+
+  async function refreshOptimizers() {
+    try {
+      const res = await fetch('/api/optimizers');
+      const { optimizers } = await res.json();
+      const current = optimizerSelect.value;
+      optimizerSelect.replaceChildren(...optimizers.map(name => new Option(name, name)));
+      if (optimizers.includes(current)) optimizerSelect.value = current;
+    } catch (err) {
+      console.error('could not load optimizers:', err);
     }
   }
 
@@ -1225,7 +1245,18 @@
     return { ctx, width, height };
   }
 
-  const trainGraph = setupGraph(document.getElementById('graph'), 520, 300);
+  const graphCanvas = document.getElementById('graph');
+  const trainGraph = setupGraph(graphCanvas, 520, 300);
+
+  // Match the canvas's pixels to the height it was actually laid out at
+  function fitTrainGraph() {
+    const height = Math.round(graphCanvas.clientHeight);
+    if (!height || height === trainGraph.height) return;
+    const dpr = window.devicePixelRatio || 1;
+    graphCanvas.height = height * dpr;
+    trainGraph.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    trainGraph.height = height;
+  }
 
   function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}, target = trainGraph) {
     const { ctx: gctx, width: GRAPH_W, height: GRAPH_H } = target;
@@ -1538,8 +1569,11 @@
   document.getElementById('openSetBtn').addEventListener('click', setWindow.open);
   document.getElementById('openNetBtn').addEventListener('click', netWindow.open);
   document.getElementById('openTrainBtn').addEventListener('click', async () => {
-    await refreshArchitectures();
+    await Promise.all([refreshArchitectures(), refreshOptimizers()]);
     trainWindow.open();
+    // Only laid out once visible, so size the graph now and redraw at the new size
+    fitTrainGraph();
+    drawGraph(run ?? undefined);
   });
 
   // Test set window: shuffle pulls a random image out of the CIFAR-10 test set.
@@ -1884,6 +1918,7 @@
       ['epochs', args?.epochs],
       ['batch size', args?.batch_size],
       ['learning rate', args?.learning_rate],
+      ['optimizer', args?.optimizer],
       ['train images', num(args?.trainset_size)],
       ['test images', num(args?.testset_size)],
       ['train time', environment ? `${environment.train_seconds}s` : null],

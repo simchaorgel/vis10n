@@ -24,9 +24,10 @@ from pydantic import BaseModel
 from dataloaders import cifar, imagenet
 from models import get_model
 from models import list_models as list_architectures
+from optimizers import list_optimizers
 from predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
 from device import device
-from training.train_msint_mlp import SimpleMLPTrainingArgs, train
+from training.train_mnist_mlp import SimpleMLPTrainingArgs, train
 
 ROOT = Path(__file__).parent
 WEIGHTS_DIR = ROOT / "weights"
@@ -66,6 +67,12 @@ def architectures():
             description = f"error: {e}"
         result.append({"name": name, "description": description})
     return {"architectures": result}
+
+
+@app.get("/api/optimizers")
+def optimizers_available():
+    """Optimizer classes the training code can be pointed at."""
+    return {"optimizers": list_optimizers()}
 
 
 def build_args(raw: dict) -> SimpleMLPTrainingArgs:

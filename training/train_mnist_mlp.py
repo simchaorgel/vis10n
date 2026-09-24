@@ -12,6 +12,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 
 from dataloaders.mnist import get_mnist
+from optimizers import get_optimizer
 
 
 # SimpleMLPTrainingArgs dataclass for model args
@@ -28,6 +29,7 @@ class SimpleMLPTrainingArgs:
     batch_size: int = 64
     epochs: int = 3
     learning_rate: float = 1e-3
+    optimizer: str = "RMSprop"
 
 
 # Check if GPU is available
@@ -50,12 +52,12 @@ def train(args: SimpleMLPTrainingArgs, model_class: type[nn.Module], on_update =
     mnist_trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
     test_trainloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-    # Define optimizer
-    optimizer = t.optim.Adam(model.parameters(), lr=args.learning_rate)
+    # Define optimizer: whichever class optimizers/optimizers.py defines under this name
+    optimizer = get_optimizer(args.optimizer)(model.parameters(), args.learning_rate)
     loss_list = []
 
     # List of accuracy for every epoch
-    accuracy_list =[]
+    accuracy_list = []
 
     # Train n times
     for epoch in range(args.epochs):        

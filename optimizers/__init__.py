@@ -25,3 +25,9 @@ def get_optimizer(name: str) -> type:
     if found is None:
         raise ValueError(f"unknown optimizer {name}, expected one of {list_optimizers()}")
     return found
+
+
+# Re-export every optimizer class, so `from optimizers import SGD` and
+# `from optimizers import *` work without naming the inner module
+globals().update(_classes())
+__all__ = list_optimizers()

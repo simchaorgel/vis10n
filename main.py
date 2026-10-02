@@ -5,17 +5,18 @@ import importlib
 import json
 import re
 import subprocess
+import sys
 import threading
 import time
 import traceback
 import urllib.request
-import webbrowser
 from dataclasses import asdict, fields
 from datetime import datetime
 from pathlib import Path
 
 import torch as t
 import uvicorn
+import webview
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -555,21 +556,28 @@ def save_model(req: SaveRequest):
     return {"ok": True, "path": str(path.relative_to(ROOT))}
 
 
-def open_browser_when_ready(url: str):
-    """Waits for the server to answer, then opens the app in the default browser."""
+def wait_for_server(url: str):
+    """Blocks until the server answers, so the window doesn't open on an error page."""
     for _ in range(120):
         try:
             urllib.request.urlopen(f"{url}/api/ping", timeout=1)
+            return
         except OSError:
             time.sleep(0.5)
-            continue
-        webbrowser.open(url)
-        return
 
 
 if __name__ == "__main__":
-    # Only runs once here, so reloads after code changes don't open more tabs
-    threading.Thread(target=open_browser_when_ready, args=("http://127.0.0.1:8000",), daemon=True).start()
+    url = "http://127.0.0.1:8000"
 
-    # Reload needs the app as an import string rather than the object
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    # The window needs the main thread, so the server runs as a child process (which also keeps reload working)
+    server = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"],
+        cwd=ROOT,
+    )
+    try:
+        wait_for_server(url)
+        webview.create_window("vis10n", url, maximized=True)
+        webview.start()
+    finally:
+        # /T also kills the reload worker, which would otherwise keep holding the port
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(server.pid)], capture_output=True)

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vis10n</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root { --text: rgba(240, 246, 250, 0.92); }
+  html, body { margin: 0; height: 100%; background: #486e88; overflow: hidden; }
+  #bg { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+
+  .stage {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "IBM Plex Mono", Consolas, monospace;
+    color: var(--text);
+    text-shadow: 0 1px 12px rgba(12, 28, 44, 0.35);
+  }
+  .group { position: relative; }
+  /* title sits above the columns without taking up layout space, so the columns stay centred */
+  h1 {
+    position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%);
+    margin: 0 0 36px;
+    white-space: nowrap;
+    font-size: 64px; font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .columns { display: grid; grid-template-columns: repeat(3, max-content); gap: 56px; }
+  h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
+  ul { list-style: none; margin: 0; padding: 0 0 0 10px; display: grid; gap: 10px; }
+  li { display: flex; align-items: baseline; gap: 12px; }
+  li::before {
+    content: ""; flex: none;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--text);
+    transform: translateY(-3px);
+  }
+  a { color: var(--text); font-size: 16px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+  a:focus-visible { outline: 1px solid var(--text); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<main class="stage">
+  <div class="group">
+    <h1>vis10n</h1>
+    <nav class="columns">
+      <section>
+        <h2>Run</h2>
+        <ul>
+          <li><a href="#">Start a new run</a></li>
+          <li><a href="#">Resume last run</a></li>
+          <li><a href="#">Run history</a></li>
+        </ul>
+      </section>
+      <section>
+        <h2>Train</h2>
+        <ul>
+          <li><a href="#">Train a new model</a></li>
+          <li><a href="#">Fine-tune existing</a></li>
+        </ul>
+      </section>
+      <section>
+        <h2>Lab</h2>
+        <ul>
+          <li><a href="#">Open the lab</a></li>
+        </ul>
+      </section>
+    </nav>
+  </div>
+</main>
+
+<script>
+  // Soft blurred blobs of blue with fine film grain. x, y as fractions of width/height; r of the larger side.
+  const BASE = [72, 110, 136];
+  const GRAIN = 26;
+  const BLOBS = [
+    { x: 0.15, y: 0.28, r: 0.55, c: [22, 50, 76],    a: 0.85 }, // dark, upper left
+    { x: 0.95, y: 0.02, r: 0.35, c: [30, 60, 90],    a: 0.6  }, // dark, top right corner
+    { x: 0.92, y: 0.46, r: 0.45, c: [176, 200, 212], a: 0.75 }, // light, right
+    { x: 0.40, y: 0.70, r: 0.40, c: [166, 192, 206], a: 0.7  }, // light, lower middle
+    { x: 0.05, y: 0.62, r: 0.35, c: [40, 72, 104],   a: 0.55 }, // shade, left
+    { x: 0.75, y: 1.02, r: 0.40, c: [36, 64, 92],    a: 0.6  }, // dark, bottom
+  ];
+
+  const canvas = document.getElementById('bg');
+  const ctx = canvas.getContext('2d');
+
+  function paint() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = canvas.width = Math.round(innerWidth * dpr);
+    const h = canvas.height = Math.round(innerHeight * dpr);
+    const big = Math.max(w, h);
+
+    ctx.fillStyle = `rgb(${BASE})`;
+    ctx.fillRect(0, 0, w, h);
+
+    for (const b of BLOBS) {
+      const g = ctx.createRadialGradient(b.x * w, b.y * h, 0, b.x * w, b.y * h, b.r * big);
+      // several stops approximate a gaussian falloff so edges stay very soft
+      for (let i = 0; i <= 8; i++) {
+        const t = i / 8;
+        g.addColorStop(t, `rgba(${b.c},${(b.a * Math.exp(-4.5 * t * t) * (1 - t)).toFixed(4)})`);
+      }
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // grain: per-pixel noise, also hides gradient banding
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() + Math.random() - 1) * GRAIN;
+      d[i] += n * 0.9; d[i + 1] += n; d[i + 2] += n * 1.05;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // redraw only once resizing stops, and only if the size really changed
+  let timer;
+  addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (Math.round(innerWidth * dpr) !== canvas.width || Math.round(innerHeight * dpr) !== canvas.height) paint();
+    }, 150);
+  });
+  paint();
+</script>
+</body>
+</html>

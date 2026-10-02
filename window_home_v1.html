@@ -41,8 +41,7 @@
   }
 
   .titlebar {
-    background: #3c4f6d;
-    margin-bottom: calc(-1 * var(--border)); /* cancels the window's gap, so no line under the titlebar */
+    background: #2f6fd6;
     color: #fff;
     height: 30px;
     padding: 0 0 0 10px;
@@ -139,45 +138,26 @@
     height: 100%;
   }
 
-  /* Flow: the class windows are laid out as one connected grid instead of free desktop windows.
-     The focused window sits in the middle; its neighbours peek in at the screen edges. */
-  .flow-stage {
+  /* Launcher: title and link columns, centred on the page */
+  .launcher {
     position: fixed;
     inset: 0;
-    overflow: clip; /* clip, not hidden, so focusing an off-screen field can't scroll the stage */
-  }
-
-  .flow-stage.animate .flow-win,
-  .flow-stage.animate .flow-wire {
-    transition-property: left, top, width, height;
-    transition-duration: 0.5s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .flow-wire {
-    position: absolute;
-    background: var(--line);
-  }
-
-  .flow-win .titlebar { cursor: default; }
-  .flow-win .titlebar .close { display: none; }
-
-  /* Unfocused windows are just targets: clicking anywhere on one navigates to it */
-  .flow-win:not(.focused) { cursor: pointer; }
-  .flow-win:not(.focused) > * { pointer-events: none; }
-
-  /* Nav window: title and link columns */
-  .nav-panel {
-    background: #3c4f6d;
-    padding: 44px 64px 52px;
     display: flex;
-    flex-direction: column;
     align-items: center;
+    justify-content: center;
     font-family: "IBM Plex Mono", Consolas, monospace;
     color: var(--home-text);
+    text-shadow: 0 1px 12px rgba(12, 28, 44, 0.35);
   }
 
-  .nav-panel h1 {
+  .launcher .group { position: relative; }
+
+  /* title sits above the columns without taking up layout space, so the columns stay centred */
+  .launcher h1 {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
     margin: 0 0 36px;
     white-space: nowrap;
     font-size: 64px;
@@ -186,15 +166,15 @@
     letter-spacing: -0.02em;
   }
 
-  .nav-panel .columns {
+  .launcher .columns {
     display: grid;
     grid-template-columns: repeat(3, max-content);
     gap: 56px;
   }
 
-  .nav-panel h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
+  .launcher h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
 
-  .nav-panel ul {
+  .launcher ul {
     list-style: none;
     margin: 0;
     padding: 0 0 0 10px;
@@ -202,9 +182,9 @@
     gap: 10px;
   }
 
-  .nav-panel li { display: flex; align-items: baseline; gap: 12px; }
+  .launcher li { display: flex; align-items: baseline; gap: 12px; }
 
-  .nav-panel li::before {
+  .launcher li::before {
     content: "";
     flex: none;
     width: 5px;
@@ -214,9 +194,9 @@
     transform: translateY(-3px);
   }
 
-  .nav-panel button,
-  .nav-panel button:hover,
-  .nav-panel button:active {
+  .launcher button,
+  .launcher button:hover,
+  .launcher button:active {
     height: auto;
     padding: 0;
     background: none;
@@ -224,10 +204,11 @@
     font: inherit;
     font-size: 16px;
     font-weight: 500;
+    text-shadow: inherit;
     white-space: nowrap;
   }
 
-  .nav-panel button:focus-visible { outline: 1px solid var(--home-text); outline-offset: 3px; }
+  .launcher button:focus-visible { outline: 1px solid var(--home-text); outline-offset: 3px; }
 
   .col > .row {
     display: flex;
@@ -243,7 +224,7 @@
     grid-template-rows: auto 34px auto 34px auto;
     justify-items: center;
     align-items: center;
-    background: #3c4f6d;
+    background: var(--panel);
     padding: 28px;
   }
 
@@ -281,6 +262,12 @@
   .flow-link.down {
     width: var(--border);
     height: 34px;
+  }
+
+  /* MNIST test window restyle */
+  #mainWindow .titlebar,
+  #mainWindow .flow {
+    background: #3c4f6d;
   }
 
   /* clear, shuffle and submit: normal button height, full box width */
@@ -937,10 +924,8 @@
 <body>
   <canvas id="bg"></canvas>
 
-  <!-- Flow stage: the nav window and the class windows, laid out by the flow script -->
-  <div class="flow-stage" id="flowStage">
-  <div class="window" id="navWindow">
-    <div class="nav-panel">
+  <main class="launcher" id="launcher">
+    <div class="group">
       <h1>vis10n</h1>
       <nav class="columns">
         <section>
@@ -965,9 +950,9 @@
         </section>
       </nav>
     </div>
-  </div>
+  </main>
 
-  <div class="window" id="mainWindow">
+  <div class="window" id="mainWindow" hidden>
     <div class="titlebar">
       <span>MNIST test</span>
       <button class="close" aria-label="Close">
@@ -1001,7 +986,7 @@
     </div>
   </div>
 
-  <div class="window" id="setWindow">
+  <div class="window" id="setWindow" hidden>
     <div class="titlebar">
       <span>CIFAR test</span>
       <button class="close" aria-label="Close">
@@ -1037,7 +1022,7 @@
     </div>
   </div>
 
-  <div class="window" id="netWindow">
+  <div class="window" id="netWindow" hidden>
     <div class="titlebar">
       <span>IMAGENET test</span>
       <button class="close" aria-label="Close">
@@ -1074,7 +1059,7 @@
     </div>
   </div>
 
-  <div class="window" id="dreamWindow">
+  <div class="window" id="dreamWindow" hidden>
     <div class="titlebar">
       <span>MNIST dream</span>
       <button class="close" aria-label="Close">
@@ -1109,7 +1094,7 @@
     </div>
   </div>
 
-  <div class="window" id="trainWindow">
+  <div class="window" id="trainWindow" hidden>
     <div class="titlebar">
       <span>MNIST train</span>
       <button class="close" aria-label="Close">
@@ -1158,9 +1143,6 @@
       </div>
     </div>
   </div>
-
-  </div>
-  <!-- end flow stage -->
 
   <div class="window" id="modelsWindow" hidden>
     <div class="titlebar">
@@ -1740,163 +1722,21 @@
     };
   }
 
-  // Flow: the nav window and the class windows form one grid, run > train > lab left to right,
-  // windows of the same class stacked vertically above and below the middle row. Only the middle row links sideways (like a gearstick).
-  // The focused window is centred; each neighbour shows PEEK px at the matching screen edge.
-  const flow = (() => {
-    const PEEK = 40; // about 1cm
-    const CELLS = [
-      { id: 'navWindow',   x: 0,  y: 0 },
-      { id: 'mainWindow',  x: -1, y: 0 },
-      { id: 'setWindow',   x: -1, y: -1 },
-      { id: 'netWindow',   x: -1, y: 1 },
-      { id: 'trainWindow', x: 0,  y: 1 },
-      { id: 'dreamWindow', x: 1,  y: 0 },
-    ];
+  const mainWindow = makeWindow(document.getElementById('mainWindow'));
+  const trainWindow = makeWindow(document.getElementById('trainWindow'));
+  const setWindow = makeWindow(document.getElementById('setWindow'));
+  const netWindow = makeWindow(document.getElementById('netWindow'));
 
-    const stage = document.getElementById('flowStage');
-    const nodes = CELLS.map(cell => ({ ...cell, el: document.getElementById(cell.id), links: [] }));
-    const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
-    const onFocus = {};
-
-    // Links: vertical within a column, horizontal only along the middle row
-    const wires = [];
-    for (const a of nodes) {
-      for (const b of nodes) {
-        const across = a.y === 0 && b.y === 0 && b.x === a.x + 1;
-        const down = a.x === b.x && b.y === a.y + 1;
-        if (!across && !down) continue;
-        const wire = { a, b, across, el: document.createElement('div') };
-        wire.el.className = 'flow-wire';
-        stage.prepend(wire.el);
-        wires.push(wire);
-        a.links.push({ node: b, dx: b.x - a.x, dy: b.y - a.y });
-        b.links.push({ node: a, dx: a.x - b.x, dy: a.y - b.y });
-      }
-    }
-
-    for (const n of nodes) {
-      n.el.classList.add('flow-win');
-      // Capture phase, so the click lands on the window rather than on whatever is inside it
-      n.el.addEventListener('click', e => {
-        if (n === focused) return;
-        e.stopPropagation();
-        e.preventDefault();
-        go(n.id);
-      }, true);
-    }
-
-    let focused = byId.navWindow;
-
-    // Walk outward from the focused window. Direct neighbours peek in at the screen edge;
-    // anything further is pushed well off screen. Each window is centred on the one it hangs off.
-    function layout() {
-      const vw = stage.clientWidth;
-      const vh = stage.clientHeight;
-      const box = new Map();
-      for (const n of nodes) box.set(n, { w: n.el.offsetWidth, h: n.el.offsetHeight });
-
-      const f = box.get(focused);
-      f.x = (vw - f.w) / 2;
-      f.y = (vh - f.h) / 2;
-      const queue = [focused];
-      const seen = new Set(queue);
-      while (queue.length) {
-        const p = queue.shift();
-        const pb = box.get(p);
-        for (const { node, dx, dy } of p.links) {
-          if (seen.has(node)) continue;
-          seen.add(node);
-          queue.push(node);
-          const nb = box.get(node);
-          const direct = p === focused;
-          if (dx) {
-            nb.y = pb.y + (pb.h - nb.h) / 2;
-            if (dx > 0) nb.x = direct ? vw - PEEK : pb.x + pb.w + vw / 2;
-            else nb.x = direct ? PEEK - nb.w : pb.x - vw / 2 - nb.w;
-          } else {
-            nb.x = pb.x + (pb.w - nb.w) / 2;
-            if (dy > 0) nb.y = direct ? vh - PEEK : pb.y + pb.h + vh / 2;
-            else nb.y = direct ? PEEK - nb.h : pb.y - vh / 2 - nb.h;
-          }
-        }
-      }
-
-      for (const n of nodes) {
-        const b = box.get(n);
-        n.el.style.left = `${b.x}px`;
-        n.el.style.top = `${b.y}px`;
-      }
-
-      // Wires run between facing edges, along the centre line the two windows share
-      const t = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--border'));
-      for (const { a, b, across, el } of wires) {
-        const A = box.get(a);
-        const B = box.get(b);
-        if (across) {
-          const cy = A.y + A.h / 2;
-          Object.assign(el.style, {
-            left: `${A.x + A.w}px`, width: `${B.x - A.x - A.w}px`,
-            top: `${cy - t / 2}px`, height: `${t}px`,
-          });
-        } else {
-          const cx = A.x + A.w / 2;
-          Object.assign(el.style, {
-            left: `${cx - t / 2}px`, width: `${t}px`,
-            top: `${A.y + A.h}px`, height: `${B.y - A.y - A.h}px`,
-          });
-        }
-      }
-    }
-
-    function go(id) {
-      const target = byId[id];
-      focused.el.classList.remove('focused');
-      focused = target;
-      focused.el.classList.add('focused');
-      // windowInFront() picks the keyboard target by z-index
-      focused.el.style.zIndex = ++topZ;
-      layout();
-      onFocus[id]?.();
-    }
-
-    new ResizeObserver(() => layout()).observe(stage);
-    for (const n of nodes) new ResizeObserver(() => layout()).observe(n.el);
-
-    // Arrow keys move to the neighbour in that direction
-    const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-    document.addEventListener('keydown', e => {
-      const dir = ARROWS[e.key];
-      if (!dir || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
-      // Never steal keys from a text field or dropdown
-      if (e.target.closest('input, textarea, select')) return;
-      const next = focused.links.find(l => l.dx === dir[0] && l.dy === dir[1]);
-      if (!next) return;
-      e.preventDefault();
-      go(next.node.id);
-    });
-
-    go(focused.id);
-    // Slide only after the first placement, so the page doesn't animate in on load
-    requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('animate')));
-
-    return { go, onFocus };
-  })();
-
-  document.getElementById('openTestBtn').addEventListener('click', () => flow.go('mainWindow'));
-  document.getElementById('openSetBtn').addEventListener('click', () => flow.go('setWindow'));
-  document.getElementById('openNetBtn').addEventListener('click', () => flow.go('netWindow'));
-  document.getElementById('openTrainBtn').addEventListener('click', () => flow.go('trainWindow'));
-  document.getElementById('openDreamBtn').addEventListener('click', () => flow.go('dreamWindow'));
-
-  // The train window is always laid out now, so size the graph once up front
-  fitTrainGraph();
-  drawGraph(run ?? undefined);
-  flow.onFocus.trainWindow = async () => {
+  document.getElementById('openTestBtn').addEventListener('click', mainWindow.open);
+  document.getElementById('openSetBtn').addEventListener('click', setWindow.open);
+  document.getElementById('openNetBtn').addEventListener('click', netWindow.open);
+  document.getElementById('openTrainBtn').addEventListener('click', async () => {
     await Promise.all([refreshArchitectures(), refreshOptimizers()]);
+    trainWindow.open();
+    // Only laid out once visible, so size the graph now and redraw at the new size
     fitTrainGraph();
     drawGraph(run ?? undefined);
-  };
+  });
 
   // Test set window: shuffle pulls a random image out of the CIFAR-10 test set.
   // The index comes back with it, so the server can be asked about the same image later.
@@ -2578,6 +2418,8 @@
 
   // Dream window: the server optimises an image to maximise the picked digit's score,
   // which shows what the model thinks that digit looks like
+  const dreamWindow = makeWindow(document.getElementById('dreamWindow'));
+  document.getElementById('openDreamBtn').addEventListener('click', dreamWindow.open);
 
   const dreamDigitInput = document.getElementById('dreamDigit');
   const dreamBtn = document.getElementById('dreamBtn');

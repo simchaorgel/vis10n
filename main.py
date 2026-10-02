@@ -25,6 +25,7 @@ from dataloaders import cifar, imagenet
 from models import get_model
 from models import list_models as list_architectures
 from optimizers import list_optimizers
+from dream import dream
 from predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
 from device import device
 from training.train_mnist_mlp import SimpleMLPTrainingArgs, train
@@ -331,6 +332,58 @@ async def predict_uploaded_photo(request: Request, model: str, dataset: str = "I
     result = prediction(dataset, label, probabilities)
     result["image"] = imagenet.preview_from_bytes(data)
     return result
+
+
+class DreamRequest(BaseModel):
+    model: str
+    digit: int
+    # Constraints on the image; all off is pure gradient ascent on the pixels
+    sparse: bool = True
+    smooth: bool = True
+    jitter: bool = True
+    clamp: bool = True
+
+
+@app.post("/api/dream")
+def dream_digit(req: DreamRequest):
+    """Optimises an image (not the weights) to maximise one digit's score, showing what the model looks for."""
+    path = WEIGHTS_DIR / f"{req.model}.pt"
+    info_path = path.with_suffix(".json")
+    if not re.fullmatch(r"[\w\- ]+", req.model) or not path.exists():
+        raise HTTPException(404, "model not found")
+    if not info_path.exists():
+        raise HTTPException(400, "no info file")
+    if not 0 <= req.digit <= 9:
+        raise HTTPException(400, "digit must be 0-9")
+
+    try:
+        info = json.loads(info_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(400, "could not read info file")
+
+    trained_on = info.get("dataset", "MNIST")
+    if trained_on != "MNIST":
+        raise HTTPException(400, f"model predicts {trained_on}")
+
+    mtime = path.stat().st_mtime
+    if loaded["path"] != path or loaded["mtime"] != mtime:
+        try:
+            loaded.update(path=path, mtime=mtime, model=load_model(path, info["model"]))
+        except Exception:
+            traceback.print_exc()
+            raise HTTPException(500, "could not load model")
+
+    # Off means the argument's "no effect" value; on keeps dream()'s default
+    constraints = {}
+    if not req.sparse:
+        constraints["l2_weight"] = 0
+    if not req.smooth:
+        constraints["tv_weight"] = 0
+    if not req.jitter:
+        constraints["jitter"] = 0
+
+    pixels, probabilities = dream(loaded["model"], req.digit, clamp=req.clamp, **constraints)
+    return {"pixels": pixels, "probabilities": probabilities}
 
 
 class SaveRequest(BaseModel):

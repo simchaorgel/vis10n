@@ -566,6 +566,31 @@ def wait_for_server(url: str):
             time.sleep(0.5)
 
 
+# The native titlebar, recoloured to match the app
+TITLEBAR_COLOR = (0x3c, 0x4f, 0x6d)   # --win-bg
+TITLEBAR_TEXT = (240, 246, 250)       # --home-text
+
+
+def color_titlebar(window):
+    """Windows 11: paint the native titlebar and border in the app's colours (ignored on older Windows)."""
+    import ctypes
+
+    hwnd = ctypes.c_void_p(window.native.Handle.ToInt64())
+
+    def set_attr(attr, value):
+        value = ctypes.c_int(value)
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, attr, ctypes.byref(value), ctypes.sizeof(value))
+
+    def colorref(rgb):
+        r, g, b = rgb
+        return r | (g << 8) | (b << 16)
+
+    set_attr(20, 1)                         # DWMWA_USE_IMMERSIVE_DARK_MODE: light caption buttons
+    set_attr(34, colorref(TITLEBAR_COLOR))  # DWMWA_BORDER_COLOR
+    set_attr(35, colorref(TITLEBAR_COLOR))  # DWMWA_CAPTION_COLOR
+    set_attr(36, colorref(TITLEBAR_TEXT))   # DWMWA_TEXT_COLOR
+
+
 if __name__ == "__main__":
     url = "http://127.0.0.1:8000"
 
@@ -576,8 +601,13 @@ if __name__ == "__main__":
     )
     try:
         wait_for_server(url)
-        webview.create_window("vis10n", url, maximized=True)
-        webview.start()
+        # Below this the focused flow window plus the neighbours peeking in at the edges stop fitting
+        window = webview.create_window("vis10n", url, maximized=True, min_size=(1400, 800))
+        window.events.shown += lambda: color_titlebar(window)
+        # Own app id, so the taskbar shows our icon instead of grouping the window under python.exe
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("vis10n")
+        webview.start(icon=str(ROOT / "assets" / "icon.ico"))
     finally:
         # /T also kills the reload worker, which would otherwise keep holding the port
         subprocess.run(["taskkill", "/T", "/F", "/PID", str(server.pid)], capture_output=True)

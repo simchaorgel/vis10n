@@ -11,6 +11,8 @@
     --border: 4px;
     --page: #486e88;
     --home-text: rgba(240, 246, 250, 0.92);
+    --win-bg: #3c4f6d;
+    --accent: #2f6fd6;
     --panel: #faf8f3;
     --text: #1f1f1f;
     --muted: #6b6760;
@@ -41,7 +43,7 @@
   }
 
   .titlebar {
-    background: #3c4f6d;
+    background: var(--win-bg);
     margin-bottom: calc(-1 * var(--border)); /* cancels the window's gap, so no line under the titlebar */
     color: #fff;
     height: 30px;
@@ -130,7 +132,15 @@
 
   [hidden] { display: none !important; }
 
-  /* Home background: blurred blobs with film grain, painted in script */
+  /* No browser focus rings; text fields draw their own focus state */
+  :focus, :focus-visible { outline: none; }
+
+  /* No spinner buttons on number inputs */
+  input[type=number] { appearance: textfield; -moz-appearance: textfield; }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* Home background: blurred blobs with film grain, painted by grain-bg.js (see BACKGROUNDS) */
   #bg {
     position: fixed;
     inset: 0;
@@ -160,7 +170,6 @@
   }
 
   .flow-win .titlebar { cursor: default; }
-  .flow-win .titlebar .close { display: none; }
 
   /* Unfocused windows are just targets: clicking anywhere on one navigates to it */
   .flow-win:not(.focused) { cursor: pointer; }
@@ -168,7 +177,7 @@
 
   /* Nav window: title and link columns */
   .nav-panel {
-    background: #3c4f6d;
+    background: var(--win-bg);
     padding: 44px 64px 52px;
     display: flex;
     flex-direction: column;
@@ -227,7 +236,6 @@
     white-space: nowrap;
   }
 
-  .nav-panel button:focus-visible { outline: 1px solid var(--home-text); outline-offset: 3px; }
 
   .col > .row {
     display: flex;
@@ -243,7 +251,7 @@
     grid-template-rows: auto 34px auto 34px auto;
     justify-items: center;
     align-items: center;
-    background: #3c4f6d;
+    background: var(--win-bg);
     padding: 28px;
   }
 
@@ -282,6 +290,24 @@
     width: var(--border);
     height: 34px;
   }
+
+  /* Per-window backgrounds: the design sits on the window itself, so it runs unbroken
+     behind the titlebar and the panel, which go transparent */
+  .window.themed > .titlebar,
+  .window.themed > .flow {
+    background: none;
+  }
+
+  /* Canvas-painted backgrounds (grain-bg.js): the canvas fills the window behind its contents */
+  .window.themed { isolation: isolate; }
+  .window > .win-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+  }
+
 
   /* clear, shuffle and submit: normal button height, full box width */
   .flow-box.btn {
@@ -486,14 +512,6 @@
   #dreamCanvas { cursor: default; }
 
   /* Training window */
-  :root {
-    --accent: #2f6fd6;
-    --row-h: 40px;
-  }
-
-  .train-main { width: 520px; }
-  .train-side { width: 260px; }
-
   .swatch {
     display: inline-block;
     width: 14px;
@@ -534,68 +552,6 @@
   .swatch.acc {
     height: 4px;
     background: #e5401c;
-  }
-
-  /* The graph soaks up any spare height, so the column always ends flush with the
-     args column however many rows that has */
-  #graph {
-    display: block;
-    width: 520px;
-    flex: 1 1 0;
-    min-height: 300px;
-    background: #fff;
-  }
-
-  /* Rows made of tiles: the row's gaps show the line colour */
-  .col > .progress,
-  .col > .arg-row {
-    height: var(--row-h);
-    display: grid;
-    gap: var(--border);
-    background: var(--line);
-  }
-
-  .progress { grid-template-columns: 90px 1fr; }
-  .arg-row  { grid-template-columns: 1fr 100px; }
-
-  .progress > *,
-  .arg-row > * {
-    background: var(--panel);
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .progress > .progress-track {
-    padding: 0;
-    align-items: stretch;
-    background: #fff;
-  }
-
-  .progress-fill {
-    width: 0;
-    background: #2e9e4f;
-  }
-
-  .arg-row > label {
-    font-family: ui-monospace, Consolas, monospace;
-  }
-
-  .arg-row > input {
-    min-width: 0;
-    border: 0;
-    border-radius: 0;
-    background: #fff;
-    color: var(--text);
-    font-family: ui-monospace, Consolas, monospace;
-    text-align: right;
-    outline: none;
-  }
-
-  .arg-row > input:focus {
-    box-shadow: inset 0 0 0 3px var(--accent);
   }
 
   .filler { flex: 1; }
@@ -671,14 +627,221 @@
     transition: transform 0.2s ease, opacity 0.2s ease;
   }
 
-  #saveBtn,
-  #confirmSaveBtn {
+  /* Training window: a flow of white cells. Model and data settings feed the graph from the left,
+     the graph flows down into progress and the start slider, and out to the right into save. */
+  .train-flow {
+    --gap-x: 72px;
+    --gap-y: 48px;
+    grid-template-columns: 260px var(--gap-x) 580px var(--gap-x) 260px;
+    grid-template-rows: auto var(--gap-y) auto var(--gap-y) auto;
+    justify-items: stretch;
+  }
+
+  .train-flow > .flow-link { width: 100%; }
+  .train-flow > .flow-link.down { width: var(--border); height: 100%; justify-self: center; }
+
+  .args-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* The two settings wires curve into one line that enters the graph. --y1 and --y2 are the
+     centres of the two cells, measured in script; 50% is the graph's centre. */
+  .args-merge {
+    --r: 16px;
+    position: relative;
+    align-self: stretch;
+  }
+
+  .args-merge > i {
+    position: absolute;
+    box-sizing: border-box;
+    border: 0 solid var(--line);
+  }
+
+  .args-merge > .elbow-top {
+    left: 0;
+    width: 50%;
+    top: calc(var(--y1, 25%) - var(--border) / 2);
+    bottom: calc(50% - var(--border) / 2);
+    border-top-width: var(--border);
+    border-right-width: var(--border);
+    border-top-right-radius: var(--r);
+  }
+
+  .args-merge > .elbow-bottom {
+    left: 0;
+    width: 50%;
+    top: calc(50% - var(--border) / 2);
+    height: calc(var(--y2, 75%) - 50% + var(--border));
+    border-bottom-width: var(--border);
+    border-right-width: var(--border);
+    border-bottom-right-radius: var(--r);
+  }
+
+  .args-merge > .merge-out {
+    left: calc(50% - var(--border));
+    right: 0;
+    top: calc(50% - var(--border) / 2);
+    height: var(--border);
+    background: var(--line);
+  }
+
+  .train-cell {
+    box-sizing: border-box;
+    border: var(--border) solid var(--line);
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Settings, progress and save cells are softly rounded; the graph stays square */
+  .train-cell:not(.graph-cell) {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .graph-cell { align-self: stretch; }
+  .save-cell  { align-self: center; }
+
+  .cell-head {
+    height: 36px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-bottom: 1px solid #ece8df;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .cell-row {
+    height: 42px;
+    flex: none;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .cell-row + .cell-row { border-top: 1px solid #f2efe8; }
+
+  .cell-row > input,
+  .cell-row > select {
+    width: 110px;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 4px 0;
+    background: none;
+    color: var(--text);
+    font: 700 15px ui-monospace, Consolas, monospace;
+    text-align: right;
+    text-align-last: right;
+    outline: none;
+    border-bottom: 2px solid transparent;
+  }
+
+  .cell-row > select { width: 140px; cursor: pointer; text-align: center; text-align-last: center; }
+
+  .cell-row > input:focus,
+  .cell-row > select:focus { border-bottom-color: var(--accent); }
+
+  /* Loss legend left and accuracy legend right, matching the graph's axes; live accuracy in the middle */
+  .graph-head {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+  }
+
+  .graph-head > :last-child { justify-self: end; }
+  .graph-head > .acc-value { margin-left: 0; font-size: 14px; }
+
+  /* The canvas is taken out of the sizing, so the graph is exactly as tall as the cells beside it */
+  .graph-box {
+    flex: 1;
+    position: relative;
+  }
+
+  #graph {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Progress: thin rounded bars */
+  .progress { grid-template-columns: 56px 1fr; }
+
+  .bar {
+    height: 8px;
+    border-radius: 4px;
+    background: #ece8df;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    width: 0;
+    height: 100%;
+    background: #2e9e4f;
+  }
+
+  .train-flow > .slider {
+    border: var(--border) solid var(--line);
+    border-radius: calc(var(--btn-h) / 2 + var(--border));
+    background: #fff;
+  }
+
+  /* Save: name, description and the save button; the button is greyed out until a run has finished */
+  .save-cell textarea,
+  .save-cell .name-input {
+    border: 0;
+    outline: none;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+  }
+
+  .save-cell .name-input {
+    height: 46px;
+    padding: 0 14px;
+    border-bottom: 1px solid #f2efe8;
+  }
+
+  .save-cell textarea {
+    height: 96px;
+    padding: 12px 14px;
+    resize: none;
+  }
+
+  /* A pill at the bottom of the description, matching the start slider */
+  #saveBtn {
+    height: 52px;
+    margin: 0 12px 12px;
+    border-radius: 26px;
     background: #2e9e4f;
     color: #fff;
   }
 
-  #saveBtn:hover,  #confirmSaveBtn:hover  { background: #37b35b; }
-  #saveBtn:active, #confirmSaveBtn:active { background: #268642; }
+  #saveBtn:hover  { background: #37b35b; }
+  #saveBtn:active { background: #268642; }
+
+  .train-flow:not(.has-model) #saveBtn {
+    background: #d6d2c8;
+    pointer-events: none;
+  }
 
   /* Models window: a box per model on the left, details of the clicked one on the right */
   .models-col  { width: 520px; }
@@ -860,8 +1023,7 @@
     cursor: default;
   }
 
-  /* Save window */
-  .save-col { width: 380px; }
+  /* Load window */
   .load-main { width: 360px; }
   .load-side { width: 300px; }
 
@@ -967,14 +1129,10 @@
     </div>
   </div>
 
-  <div class="window" id="mainWindow">
+  <div class="window themed" id="mainWindow">
+    <canvas class="win-bg"></canvas>
     <div class="titlebar">
       <span>MNIST test</span>
-      <button class="close" aria-label="Close">
-        <svg width="8" height="8" viewBox="0 0 8 8">
-          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
 
     <div class="flow">
@@ -1001,14 +1159,10 @@
     </div>
   </div>
 
-  <div class="window" id="setWindow">
+  <div class="window themed" id="setWindow">
+    <canvas class="win-bg"></canvas>
     <div class="titlebar">
       <span>CIFAR test</span>
-      <button class="close" aria-label="Close">
-        <svg width="8" height="8" viewBox="0 0 8 8">
-          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
 
     <div class="flow">
@@ -1037,14 +1191,10 @@
     </div>
   </div>
 
-  <div class="window" id="netWindow">
+  <div class="window themed" id="netWindow">
+    <canvas class="win-bg"></canvas>
     <div class="titlebar">
       <span>IMAGENET test</span>
-      <button class="close" aria-label="Close">
-        <svg width="8" height="8" viewBox="0 0 8 8">
-          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
 
     <div class="flow">
@@ -1074,14 +1224,10 @@
     </div>
   </div>
 
-  <div class="window" id="dreamWindow">
+  <div class="window themed" id="dreamWindow">
+    <canvas class="win-bg"></canvas>
     <div class="titlebar">
       <span>MNIST dream</span>
-      <button class="close" aria-label="Close">
-        <svg width="8" height="8" viewBox="0 0 8 8">
-          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
 
     <div class="flow">
@@ -1109,52 +1255,54 @@
     </div>
   </div>
 
-  <div class="window" id="trainWindow">
+  <div class="window themed" id="trainWindow">
+    <canvas class="win-bg"></canvas>
     <div class="titlebar">
       <span>MNIST train</span>
-      <button class="close" aria-label="Close">
-        <svg width="8" height="8" viewBox="0 0 8 8">
-          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
 
-    <div class="content">
-      <div class="col train-main">
-        <div class="label">
-          <i class="swatch"></i>loss<i class="swatch acc"></i>accuracy
-          <span class="acc-value" id="accValue">–</span>
-        </div>
-        <canvas id="graph"></canvas>
+    <div class="flow train-flow" id="trainFlow">
+      <div class="slider" id="trainSlider" style="grid-area: 1 / 3">
+        <div class="slider-hint">start training</div>
+        <div class="slider-knob"></div>
+      </div>
+      <div class="flow-link down" style="grid-area: 2 / 3"></div>
 
-        <div class="progress" id="epochProgress">
-          <div>epoch</div>
-          <div class="progress-track"><div class="progress-fill"></div></div>
+      <div class="args-stack" id="argsStack" style="grid-area: 3 / 1">
+        <div class="train-cell" id="modelCell">
+          <label class="cell-row">architecture<select id="archSelect"></select></label>
+          <label class="cell-row">optimizer<select id="optimizerSelect"></select></label>
         </div>
-
-        <div class="progress" id="totalProgress">
-          <div>total</div>
-          <div class="progress-track"><div class="progress-fill"></div></div>
-        </div>
-
-        <div class="slider" id="trainSlider">
-          <div class="slider-hint">start training</div>
-          <div class="slider-knob"></div>
-        </div>
+        <div class="train-cell" id="dataCell"></div>
+      </div>
+      <div class="args-merge" id="argsMerge" style="grid-area: 3 / 2">
+        <i class="elbow-top"></i><i class="elbow-bottom"></i><i class="merge-out"></i>
       </div>
 
-      <div class="col train-side" id="argsCol">
-        <div class="label">Architecture</div>
-        <div class="select-row">
-          <select id="archSelect"></select>
+      <div class="train-cell graph-cell" style="grid-area: 3 / 3">
+        <div class="cell-head graph-head">
+          <span><i class="swatch"></i>loss</span>
+          <span class="acc-value" id="accValue">–</span>
+          <span><i class="swatch acc"></i>accuracy</span>
         </div>
-        <div class="label">Optimizer</div>
-        <div class="select-row">
-          <select id="optimizerSelect"></select>
-        </div>
-        <div class="label">Args</div>
-        <div class="filler"></div>
+        <div class="graph-box"><canvas id="graph"></canvas></div>
+      </div>
+
+      <div class="flow-link save-link" style="grid-area: 3 / 4"></div>
+      <div class="train-cell save-cell" style="grid-area: 3 / 5">
+        <input class="name-input" id="modelName" type="text" placeholder="model name" spellcheck="false">
+        <textarea id="modelDesc" placeholder="description (optional)"></textarea>
         <button id="saveBtn">save model</button>
+      </div>
+
+      <div class="flow-link down" style="grid-area: 4 / 3"></div>
+      <div class="train-cell" style="grid-area: 5 / 3">
+        <div class="cell-row progress" id="epochProgress">
+          <span>epoch</span><div class="bar"><div class="progress-fill"></div></div>
+        </div>
+        <div class="cell-row progress" id="totalProgress">
+          <span>total</span><div class="bar"><div class="progress-fill"></div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1247,31 +1395,12 @@
     </div>
   </div>
 
-  <div class="window" id="saveWindow" hidden>
-    <div class="titlebar">
-      <span>save model</span>
-      <button class="close" aria-label="Close">
-        <svg width="8" height="8" viewBox="0 0 8 8">
-          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </div>
 
-    <div class="content">
-      <div class="col save-col">
-        <div class="label">Name</div>
-        <div class="name-row">
-          <input id="modelName" type="text" placeholder="model name" spellcheck="false">
-        </div>
-        <div class="label">Description</div>
-        <div class="desc-row">
-          <textarea id="modelDesc" placeholder="optional"></textarea>
-        </div>
-        <button id="confirmSaveBtn">save</button>
-      </div>
-    </div>
-  </div>
-
+<script src="/assets/canvas-bg.js"></script>
+<script src="/assets/grain-bg.js"></script>
+<script src="/assets/riso-bg.js"></script>
+<script src="/assets/silk-bg.js"></script>
+<script src="/assets/equilux-bg.js"></script>
 <script>
   const SIZE = 28;
 
@@ -1346,24 +1475,20 @@
   const { ctx, clear: clearInput } = setupDrawing(input);
   document.getElementById('clearBtn').addEventListener('click', clearInput);
 
-  // Training args: add a line here to get a new input
+  // Training args: add a line here to get a new input; cell is the box it shows up in
   const TRAIN_ARGS = [
-    { name: 'trainset_size', value: 10000, step: 1 },
-    { name: 'testset_size',  value: 1000,  step: 1 },
-    { name: 'batch_size',    value: 64,    step: 1 },
-    { name: 'epochs',        value: 3,     step: 1 },
-    { name: 'learning_rate', value: 0.001, step: 'any' },
+    { name: 'learning_rate', label: 'learning rate', cell: 'modelCell', value: 0.001, step: 'any' },
+    { name: 'trainset_size', label: 'train set',     cell: 'dataCell',  value: 10000, step: 1 },
+    { name: 'testset_size',  label: 'test set',      cell: 'dataCell',  value: 1000,  step: 1 },
+    { name: 'batch_size',    label: 'batch size',    cell: 'dataCell',  value: 64,    step: 1 },
+    { name: 'epochs',        label: 'epochs',        cell: 'dataCell',  value: 3,     step: 1 },
   ];
 
-  const argsCol = document.getElementById('argsCol');
-  const argsFiller = argsCol.querySelector('.filler');
-
   for (const arg of TRAIN_ARGS) {
-    const row = document.createElement('div');
-    row.className = 'arg-row';
-    row.innerHTML = `<label for="arg-${arg.name}">${arg.name}</label>
-      <input id="arg-${arg.name}" type="number" step="${arg.step}" value="${arg.value}">`;
-    argsCol.insertBefore(row, argsFiller);
+    const row = document.createElement('label');
+    row.className = 'cell-row';
+    row.innerHTML = `${arg.label}<input id="arg-${arg.name}" type="number" step="${arg.step}" value="${arg.value}">`;
+    document.getElementById(arg.cell).append(row);
   }
 
   function readArgs() {
@@ -1415,31 +1540,25 @@
   }
 
   // Graph: loss per batch (left axis), accuracy per epoch (right axis)
-  // A graph target is a canvas set up at a fixed size; drawGraph can draw on any of them
-  function setupGraph(canvas, width, height) {
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
-    return { ctx, width, height };
-  }
-
   const graphCanvas = document.getElementById('graph');
-  const trainGraph = setupGraph(graphCanvas, 520, 300);
+  const trainGraph = { ctx: graphCanvas.getContext('2d'), width: 0, height: 0 };
 
-  // Match the canvas's pixels to the height it was actually laid out at
+  // Match the canvas's pixels to the size it was laid out at; returns whether that changed
   function fitTrainGraph() {
+    const width = Math.round(graphCanvas.clientWidth);
     const height = Math.round(graphCanvas.clientHeight);
-    if (!height || height === trainGraph.height) return;
+    if (!width || !height || (width === trainGraph.width && height === trainGraph.height)) return false;
     const dpr = window.devicePixelRatio || 1;
+    graphCanvas.width = width * dpr;
     graphCanvas.height = height * dpr;
     trainGraph.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    trainGraph.width = width;
     trainGraph.height = height;
+    return true;
   }
 
-  function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}, target = trainGraph) {
-    const { ctx: gctx, width: GRAPH_W, height: GRAPH_H } = target;
+  function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}) {
+    const { ctx: gctx, width: GRAPH_W, height: GRAPH_H } = trainGraph;
     const pad = { l: 44, r: 48, t: 16, b: 28 };
     const w = GRAPH_W - pad.l - pad.r;
     const h = GRAPH_H - pad.t - pad.b;
@@ -1516,7 +1635,24 @@
     gctx.stroke();
   }
 
+  fitTrainGraph();
   drawGraph();
+
+  // The graph's height follows the settings cells beside it, so refit whenever it changes
+  new ResizeObserver(() => {
+    if (fitTrainGraph()) drawGraph(run ?? undefined);
+  }).observe(graphCanvas);
+
+  // Where the two settings wires leave their cells, for the merge into the graph
+  const argsMerge = document.getElementById('argsMerge');
+  function placeArgsMerge() {
+    const top = argsMerge.getBoundingClientRect().top;
+    for (const [name, id] of [['--y1', 'modelCell'], ['--y2', 'dataCell']]) {
+      const r = document.getElementById(id).getBoundingClientRect();
+      argsMerge.style.setProperty(name, `${r.top + r.height / 2 - top}px`);
+    }
+  }
+  new ResizeObserver(placeArgsMerge).observe(document.getElementById('argsStack'));
 
   // Drag-to-train slider: only fires when dragged all the way to the end.
   // It toggles between start and cancel; the knob snaps back each time.
@@ -1587,6 +1723,7 @@
   }
 
   // Training run: one websocket per run, streaming updates from train()
+  const trainFlow = document.getElementById('trainFlow');
   let trainSocket = null;
   let run = null;
   let redrawQueued = false;
@@ -1619,6 +1756,8 @@
 
       case 'done':
         console.log(update.cancelled ? 'training cancelled' : 'training done');
+        // The server only keeps a model from a run that finished, so only then can it be saved
+        if (!update.cancelled) trainFlow.classList.add('has-model');
         endRun();
         break;
 
@@ -1638,6 +1777,7 @@
   function startTraining() {
     const args = readArgs();
     run = { loss: [], accuracy: [], batchesPerEpoch: 0, epochs: args.epochs };
+    trainFlow.classList.remove('has-model');
     setProgress('epochProgress', 0);
     setProgress('totalProgress', 0);
     document.getElementById('accValue').textContent = '–';
@@ -1740,11 +1880,36 @@
     };
   }
 
+  // F5 or ctrl+R reloads the page, to pick up changes without restarting the app
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F5' || (e.ctrlKey && e.key.toLowerCase() === 'r')) {
+      e.preventDefault();
+      location.reload();
+    }
+  });
+
+  // Backgrounds: each canvas gets its painter (see assets/), and repaints itself if its size changes.
+  // Windows with one are marked .themed and have a <canvas class="win-bg"> as their first child.
+  const trainSeed = equiluxSeed(EQUILUX_PRESETS.equilux);
+  const dreamSeed = silkSeed(SILK_PRESETS.silk);
+  const BACKGROUNDS = [
+    ['#bg',                    c => paintGrainBg(c, PRESETS.blue)],                       // home page
+    ['#mainWindow > .win-bg',  c => paintGrainBg(c, PRESETS.coral)],                      // MNIST test
+    ['#setWindow > .win-bg',   c => paintGrainBg(c, PRESETS.green)],                      // CIFAR test
+    ['#netWindow > .win-bg',   c => paintRisoBg(c, RISO_PRESETS.dark)],                   // IMAGENET test
+    ['#trainWindow > .win-bg', c => paintEquiluxBg(c, EQUILUX_PRESETS.equilux, trainSeed)], // MNIST train
+    ['#dreamWindow > .win-bg', c => paintSilkBg(c, SILK_PRESETS.silk, dreamSeed)],          // MNIST dream
+  ];
+  for (const [selector, paint] of BACKGROUNDS) mountCanvasBg(document.querySelector(selector), paint);
+
   // Flow: the nav window and the class windows form one grid, run > train > lab left to right,
   // windows of the same class stacked vertically above and below the middle row. Only the middle row links sideways (like a gearstick).
   // The focused window is centred; each neighbour shows PEEK px at the matching screen edge.
   const flow = (() => {
     const PEEK = 40; // about 1cm
+    // A neighbour only peeks in when there's at least this much room between it and the focused
+    // window; otherwise it stays just off screen and only its wire runs to the edge
+    const PEEK_ROOM = 20;
     const CELLS = [
       { id: 'navWindow',   x: 0,  y: 0 },
       { id: 'mainWindow',  x: -1, y: 0 },
@@ -1810,14 +1975,20 @@
           queue.push(node);
           const nb = box.get(node);
           const direct = p === focused;
+          // Room between the focused window's edge and the peek, on this side
+          const room = dx > 0 ? vw - (pb.x + pb.w) - PEEK
+            : dx < 0 ? pb.x - PEEK
+            : dy > 0 ? vh - (pb.y + pb.h) - PEEK
+            : pb.y - PEEK;
+          const peek = room >= PEEK_ROOM ? PEEK : 0;
           if (dx) {
             nb.y = pb.y + (pb.h - nb.h) / 2;
-            if (dx > 0) nb.x = direct ? vw - PEEK : pb.x + pb.w + vw / 2;
-            else nb.x = direct ? PEEK - nb.w : pb.x - vw / 2 - nb.w;
+            if (dx > 0) nb.x = direct ? vw - peek : pb.x + pb.w + vw / 2;
+            else nb.x = direct ? peek - nb.w : pb.x - vw / 2 - nb.w;
           } else {
             nb.x = pb.x + (pb.w - nb.w) / 2;
-            if (dy > 0) nb.y = direct ? vh - PEEK : pb.y + pb.h + vh / 2;
-            else nb.y = direct ? PEEK - nb.h : pb.y - vh / 2 - nb.h;
+            if (dy > 0) nb.y = direct ? vh - peek : pb.y + pb.h + vh / 2;
+            else nb.y = direct ? peek - nb.h : pb.y - vh / 2 - nb.h;
           }
         }
       }
@@ -1889,14 +2060,8 @@
   document.getElementById('openTrainBtn').addEventListener('click', () => flow.go('trainWindow'));
   document.getElementById('openDreamBtn').addEventListener('click', () => flow.go('dreamWindow'));
 
-  // The train window is always laid out now, so size the graph once up front
-  fitTrainGraph();
-  drawGraph(run ?? undefined);
-  flow.onFocus.trainWindow = async () => {
-    await Promise.all([refreshArchitectures(), refreshOptimizers()]);
-    fitTrainGraph();
-    drawGraph(run ?? undefined);
-  };
+  // Pick up architectures and optimizers added since the page loaded
+  flow.onFocus.trainWindow = () => Promise.all([refreshArchitectures(), refreshOptimizers()]);
 
   // Test set window: shuffle pulls a random image out of the CIFAR-10 test set.
   // The index comes back with it, so the server can be asked about the same image later.
@@ -2474,20 +2639,14 @@
     if (e.key === 'Enter') uploadModel();
   });
 
-  // Save window: asks for a name and description, then saves the last trained model
-  const saveWindow = makeWindow(document.getElementById('saveWindow'));
+  // Save: name and description for the last trained model, saved straight from the train window
   const modelNameInput = document.getElementById('modelName');
   const modelDescInput = document.getElementById('modelDesc');
-  const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+  const saveBtn = document.getElementById('saveBtn');
 
-  document.getElementById('saveBtn').addEventListener('click', () => {
-    saveWindow.open();
-    modelNameInput.focus();
-  });
-
-  function flashConfirm(text) {
-    confirmSaveBtn.textContent = text;
-    setTimeout(() => { confirmSaveBtn.textContent = 'save'; }, 1500);
+  function flashSave(text) {
+    saveBtn.textContent = text;
+    setTimeout(() => { saveBtn.textContent = 'save model'; }, 1500);
   }
 
   async function saveModel() {
@@ -2499,22 +2658,22 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        flashConfirm(typeof data.detail === 'string' ? data.detail : 'invalid name');
+        flashSave(typeof data.detail === 'string' ? data.detail : 'invalid name');
         return;
       }
       console.log('saved model to', data.path);
       modelNameInput.value = '';
       modelDescInput.value = '';
-      saveWindow.close();
+      flashSave('saved');
     } catch (err) {
       console.error('save failed:', err);
-      flashConfirm('save failed');
+      flashSave('save failed');
     }
   }
 
-  confirmSaveBtn.addEventListener('click', saveModel);
+  saveBtn.addEventListener('click', saveModel);
   modelNameInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') saveModel();
+    if (e.key === 'Enter' && trainFlow.classList.contains('has-model')) saveModel();
   });
 
   // Submit: send the drawing to the selected model, show the predicted digit
@@ -2675,65 +2834,6 @@
       flashDream('failed');
     }
   });
-
-  // Home background: soft blurred blobs of blue with fine film grain.
-  // x, y as fractions of width/height; r of the larger side.
-  (() => {
-    const BASE = [72, 110, 136];
-    const GRAIN = 26;
-    const BLOBS = [
-      { x: 0.15, y: 0.28, r: 0.55, c: [22, 50, 76],    a: 0.85 }, // dark, upper left
-      { x: 0.95, y: 0.02, r: 0.35, c: [30, 60, 90],    a: 0.6  }, // dark, top right corner
-      { x: 0.92, y: 0.46, r: 0.45, c: [176, 200, 212], a: 0.75 }, // light, right
-      { x: 0.40, y: 0.70, r: 0.40, c: [166, 192, 206], a: 0.7  }, // light, lower middle
-      { x: 0.05, y: 0.62, r: 0.35, c: [40, 72, 104],   a: 0.55 }, // shade, left
-      { x: 0.75, y: 1.02, r: 0.40, c: [36, 64, 92],    a: 0.6  }, // dark, bottom
-    ];
-
-    const canvas = document.getElementById('bg');
-    const ctx = canvas.getContext('2d');
-
-    function paint() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = canvas.width = Math.round(innerWidth * dpr);
-      const h = canvas.height = Math.round(innerHeight * dpr);
-      const big = Math.max(w, h);
-
-      ctx.fillStyle = `rgb(${BASE})`;
-      ctx.fillRect(0, 0, w, h);
-
-      for (const b of BLOBS) {
-        const g = ctx.createRadialGradient(b.x * w, b.y * h, 0, b.x * w, b.y * h, b.r * big);
-        // several stops approximate a gaussian falloff so edges stay very soft
-        for (let i = 0; i <= 8; i++) {
-          const t = i / 8;
-          g.addColorStop(t, `rgba(${b.c},${(b.a * Math.exp(-4.5 * t * t) * (1 - t)).toFixed(4)})`);
-        }
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-      }
-
-      // grain: per-pixel noise, also hides gradient banding
-      const img = ctx.getImageData(0, 0, w, h);
-      const d = img.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const n = (Math.random() + Math.random() - 1) * GRAIN;
-        d[i] += n * 0.9; d[i + 1] += n; d[i + 2] += n * 1.05;
-      }
-      ctx.putImageData(img, 0, 0);
-    }
-
-    // redraw only once resizing stops, and only if the size really changed
-    let timer;
-    addEventListener('resize', () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        if (Math.round(innerWidth * dpr) !== canvas.width || Math.round(innerHeight * dpr) !== canvas.height) paint();
-      }, 150);
-    });
-    paint();
-  })();
 
   // Server connection check
   fetch('/api/ping')

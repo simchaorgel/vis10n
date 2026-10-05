@@ -1,22 +1,26 @@
 # vis10n server: serves the UI and exposes the API the windows talk to
-# Run with: python main.py
+# Run with: python main.py (opens the desktop window; uvicorn imports this module as the server)
+
+if __name__ == "__main__":
+    # Open the window before the heavy imports below, so it appears at once; the server process imports them itself
+    from launcher import run
+    run()
+    raise SystemExit
+
 import asyncio
 import importlib
 import json
 import re
 import subprocess
-import sys
 import threading
 import time
 import traceback
-import urllib.request
 from dataclasses import asdict, fields
 from datetime import datetime
 from pathlib import Path
 
 import torch as t
 import uvicorn
-import webview
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -554,60 +558,3 @@ def save_model(req: SaveRequest):
     path.with_suffix(".json").write_text(json.dumps(model_info(name, req.description, latest_run), indent=2))
 
     return {"ok": True, "path": str(path.relative_to(ROOT))}
-
-
-def wait_for_server(url: str):
-    """Blocks until the server answers, so the window doesn't open on an error page."""
-    for _ in range(120):
-        try:
-            urllib.request.urlopen(f"{url}/api/ping", timeout=1)
-            return
-        except OSError:
-            time.sleep(0.5)
-
-
-# The native titlebar, recoloured to match the app
-TITLEBAR_COLOR = (0x3c, 0x4f, 0x6d)   # --win-bg
-TITLEBAR_TEXT = (240, 246, 250)       # --home-text
-
-
-def color_titlebar(window):
-    """Windows 11: paint the native titlebar and border in the app's colours (ignored on older Windows)."""
-    import ctypes
-
-    hwnd = ctypes.c_void_p(window.native.Handle.ToInt64())
-
-    def set_attr(attr, value):
-        value = ctypes.c_int(value)
-        ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, attr, ctypes.byref(value), ctypes.sizeof(value))
-
-    def colorref(rgb):
-        r, g, b = rgb
-        return r | (g << 8) | (b << 16)
-
-    set_attr(20, 1)                         # DWMWA_USE_IMMERSIVE_DARK_MODE: light caption buttons
-    set_attr(34, colorref(TITLEBAR_COLOR))  # DWMWA_BORDER_COLOR
-    set_attr(35, colorref(TITLEBAR_COLOR))  # DWMWA_CAPTION_COLOR
-    set_attr(36, colorref(TITLEBAR_TEXT))   # DWMWA_TEXT_COLOR
-
-
-if __name__ == "__main__":
-    url = "http://127.0.0.1:8000"
-
-    # The window needs the main thread, so the server runs as a child process (which also keeps reload working)
-    server = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"],
-        cwd=ROOT,
-    )
-    try:
-        wait_for_server(url)
-        # Below this the focused flow window plus the neighbours peeking in at the edges stop fitting
-        window = webview.create_window("vis10n", url, maximized=True, min_size=(1400, 800))
-        window.events.shown += lambda: color_titlebar(window)
-        # Own app id, so the taskbar shows our icon instead of grouping the window under python.exe
-        import ctypes
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("vis10n")
-        webview.start(icon=str(ROOT / "assets" / "icon.ico"))
-    finally:
-        # /T also kills the reload worker, which would otherwise keep holding the port
-        subprocess.run(["taskkill", "/T", "/F", "/PID", str(server.pid)], capture_output=True)

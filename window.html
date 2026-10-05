@@ -157,6 +157,30 @@
     overflow: clip; /* clip, not hidden, so focusing an off-screen field can't scroll the stage */
   }
 
+  /* Until the windows are laid out (and the fonts that size them are in), show only the background
+     and the same spinner as the launcher's splash, so the swap from splash to app is seamless */
+  /* On reveal the windows fade in over the unchanged background while the spinner fades out */
+  .flow-stage { transition: opacity 0.3s ease-out; }
+  html:not(.ready) .flow-stage { opacity: 0; visibility: hidden; }
+
+  html.ready body::after { opacity: 0; visibility: hidden; }
+
+  body::after {
+    transition: opacity 0.2s ease-out, visibility 0s 0.2s;
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    margin: -22px 0 0 -22px;
+    box-sizing: border-box;
+    border: 5px solid rgba(240, 246, 250, 0.25);
+    border-top-color: rgba(240, 246, 250, 0.92);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
   .flow-stage.animate .flow-win,
   .flow-stage.animate .flow-wire {
     transition-property: left, top, width, height;
@@ -457,13 +481,24 @@
 
   /* Dream window: the constraints as toggles, a big digit input, and a result canvas
      that can't be drawn on */
+  /* One row of four across the top, spanning from the digit box's left edge to the image box's right */
+  #dreamToggles {
+    grid-area: 1 / 1 / 2 / 6;
+    justify-self: stretch;
+  }
+
   .toggles {
+    width: auto;
     height: auto;
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--border);
     background: var(--line);
+    border-radius: 12px;
+    overflow: hidden;
   }
+
+  #dreamBtn { border-radius: 999px; }
 
   .toggles button {
     height: 40px;
@@ -1095,9 +1130,16 @@
     box-shadow: inset 0 0 0 3px var(--accent);
   }
 </style>
+<!-- Background painters: loaded up front so the home background is in the very first frame -->
+<script src="/assets/canvas-bg.js"></script>
+<script src="/assets/grain-bg.js"></script>
+<script src="/assets/riso-bg.js"></script>
+<script src="/assets/silk-bg.js"></script>
+<script src="/assets/equilux-bg.js"></script>
 </head>
 <body>
   <canvas id="bg"></canvas>
+  <script>mountCanvasBg(document.getElementById('bg'), c => paintGrainBg(c, PRESETS.blue));</script>
 
   <!-- Flow stage: the nav window and the class windows, laid out by the flow script -->
   <div class="flow-stage" id="flowStage">
@@ -1396,11 +1438,6 @@
   </div>
 
 
-<script src="/assets/canvas-bg.js"></script>
-<script src="/assets/grain-bg.js"></script>
-<script src="/assets/riso-bg.js"></script>
-<script src="/assets/silk-bg.js"></script>
-<script src="/assets/equilux-bg.js"></script>
 <script>
   const SIZE = 28;
 
@@ -1888,12 +1925,12 @@
     }
   });
 
-  // Backgrounds: each canvas gets its painter (see assets/), and repaints itself if its size changes.
+  // Window backgrounds: each canvas gets its painter (see assets/), and repaints itself if its size
+  // changes. The home page's own background is mounted right after its canvas, at the top of <body>.
   // Windows with one are marked .themed and have a <canvas class="win-bg"> as their first child.
   const trainSeed = equiluxSeed(EQUILUX_PRESETS.equilux);
   const dreamSeed = silkSeed(SILK_PRESETS.silk);
   const BACKGROUNDS = [
-    ['#bg',                    c => paintGrainBg(c, PRESETS.blue)],                       // home page
     ['#mainWindow > .win-bg',  c => paintGrainBg(c, PRESETS.coral)],                      // MNIST test
     ['#setWindow > .win-bg',   c => paintGrainBg(c, PRESETS.green)],                      // CIFAR test
     ['#netWindow > .win-bg',   c => paintRisoBg(c, RISO_PRESETS.dark)],                   // IMAGENET test
@@ -2048,10 +2085,16 @@
     });
 
     go(focused.id);
-    // Slide only after the first placement, so the page doesn't animate in on load
-    requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('animate')));
 
-    return { go, onFocus };
+    // Show the windows once they're settled, and only then turn on sliding,
+    // so nothing visibly jumps or slides into place on load
+    function reveal() {
+      layout();
+      document.documentElement.classList.add('ready');
+      requestAnimationFrame(() => requestAnimationFrame(() => stage.classList.add('animate')));
+    }
+
+    return { go, onFocus, reveal };
   })();
 
   document.getElementById('openTestBtn').addEventListener('click', () => flow.go('mainWindow'));
@@ -2834,6 +2877,9 @@
       flashDream('failed');
     }
   });
+
+  // Reveal the app once the fonts are in, since they change the windows' sizes (at most a second's wait)
+  Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1000))]).then(flow.reveal);
 
   // Server connection check
   fetch('/api/ping')

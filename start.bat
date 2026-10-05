@@ -10,4 +10,5 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 ".venv\Scripts\python.exe" main.py
-pause
+rem Close with the app; stay open only if it crashed, so the error can be read
+if errorlevel 1 pause

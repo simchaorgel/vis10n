@@ -878,38 +878,79 @@
     pointer-events: none;
   }
 
-  /* Models window: a box per model on the left, details of the clicked one on the right */
-  .models-col  { width: 520px; }
-  .model-details { width: 300px; }
-
-  .col > .model-grid {
-    flex: 1;
-    min-height: 0;
-    box-sizing: border-box;
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    align-content: start;
-    gap: 12px;
-    padding: 12px;
-    background: var(--panel);
-  }
-
-  .model-card {
-    box-sizing: border-box;
-    height: 96px;
-    padding: 10px 12px;
-    border: var(--border) solid var(--line);
-    background: #fff;
+  /* Model picker: a dark overlay over the whole screen; the cards sit on it, above the details card */
+  .picker {
+    position: fixed;
+    inset: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    text-align: left;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 20px;
+    padding: 40px 40px 24px;
+    box-sizing: border-box;
+    background: rgba(6, 10, 18, 0.6);
+    backdrop-filter: blur(10px);
   }
 
-  .model-card.active,
-  .model-card.active:hover {
-    background: #e3dccb;
+  .picker[hidden] { display: none; }
+
+  .picker-title {
+    color: var(--home-text);
+    font: 500 15px "IBM Plex Mono", Consolas, monospace;
+  }
+
+  .model-grid {
+    max-height: 408px;   /* three rows of cards, then it scrolls */
+    padding: 6px;        /* room for a lifted card's outline */
+    overflow-y: auto;
+    scrollbar-width: none;   /* a scrollbar would squeeze the columns the chips are drawn for */
+    display: grid;
+    grid-template-columns: repeat(4, 242px);   /* chips are drawn at this card size */
+    justify-content: center;
+    align-content: start;
+    gap: 12px;
+  }
+
+  /* A card is the model's chip, with its name and a short line about it along the bottom */
+  .model-card {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    height: 120px;
+    padding: 10px 12px;
+    border: var(--border) solid var(--line);
+    background: #07070b;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 2px;
+    text-align: left;
+    color: #fff;
+  }
+
+  /* The chip fills the card; the dark wash only rises behind the text, so the chip shows above it */
+  .model-chip {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .model-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(7, 7, 11, 0.92) 0%, rgba(7, 7, 11, 0.7) 40%, rgba(7, 7, 11, 0.1) 85%);
+  }
+
+  .model-card > span { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+
+  /* The one being viewed: lifted a little, with a white outline */
+  .model-card.active {
+    transform: translateY(-3px);
+    outline: 2px solid #fff;
+    outline-offset: 2px;
   }
 
   /* The most accurate model of the listed ones wears a gradient ring: the border is
@@ -918,20 +959,13 @@
   .model-card.best:hover {
     border-color: transparent;
     background:
-      linear-gradient(#fff, #fff) padding-box,
-      conic-gradient(from 210deg, #ff5f6d, #ffc371, #7fd6a6, #2f6fd6, #a06cd5, #ff5f6d) border-box;
-  }
-
-  .model-card.best.active,
-  .model-card.best.active:hover {
-    background:
-      linear-gradient(#e3dccb, #e3dccb) padding-box,
+      linear-gradient(#07070b, #07070b) padding-box,
       conic-gradient(from 210deg, #ff5f6d, #ffc371, #7fd6a6, #2f6fd6, #a06cd5, #ff5f6d) border-box;
   }
 
   .model-card-top {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
     width: 100%;
     font-size: 15px;
@@ -946,36 +980,28 @@
 
   .model-card-acc {
     margin-left: auto;
-    color: #e5401c;
-    font-variant-numeric: tabular-nums;
+    font: 700 14px ui-monospace, Consolas, monospace;
   }
 
-  .model-card-arch {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--accent);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .model-card-meta {
-    margin-top: auto;
+  .model-card-sub {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 12px;
     font-weight: 500;
-    color: var(--muted);
+    color: rgba(255, 255, 255, 0.7);
   }
 
   .in-use {
-    padding: 2px 6px;
-    background: var(--accent);
+    flex: none;
+    padding: 1px 7px;
+    border-radius: 8px;
+    background: #2e9e4f;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
+    text-shadow: none;
   }
 
   .model-grid > .empty {
@@ -983,78 +1009,101 @@
     height: 60px;
     display: flex;
     align-items: center;
-    padding: 0 4px;
-    color: var(--muted);
+    justify-content: center;
+    color: rgba(240, 246, 250, 0.6);
     font-weight: 600;
   }
 
-  .col > .detail-desc {
-    height: 64px;
+  /* Details: a light card like the train window's cells */
+  .model-details {
+    width: 782px;
     box-sizing: border-box;
-    overflow-y: auto;
-    padding: 10px 14px;
+    border: var(--border) solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    padding: 6px 18px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Name on the left, the actions on the right */
+  .detail-head {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  /* One line; the full description is its tooltip */
+  .detail-desc {
+    padding-bottom: 10px;
     font-size: 14px;
     line-height: 1.35;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .detail-desc.none { color: var(--muted); }
 
-  .col > .stat-grid {
+  /* Stats: label over value, seven to a row; a value too long to fit shows in full on hover */
+  .stat-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--border);
-    background: var(--line);
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px 14px;
+    padding: 10px 0 4px;
+    border-top: 1px solid #ece8df;
   }
 
   .stat-grid > div {
-    height: 32px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 0 12px;
-    background: var(--panel);
-    font-size: 13px;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
   }
 
-  .stat-key { color: var(--muted); font-weight: 600; }
-  .stat-val { font-weight: 700; font-variant-numeric: tabular-nums; }
-
-  #useModelBtn {
-    background: var(--accent);
-    color: #fff;
+  .stat-key { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .stat-val {
+    font: 700 13px ui-monospace, Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  /* Delete sits in the corner of the name row, quiet until you hover it */
-  #deleteModelBtn {
-    margin-left: auto;
+  /* Quiet text buttons before the use pill: delete, then load */
+  #deleteModelBtn,
+  #loadModelBtn {
     height: auto;
-    padding: 2px 4px;
+    padding: 4px 6px;
     background: none;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
   }
 
-  #deleteModelBtn:hover,
-  #deleteModelBtn:active { background: none; color: #e5401c; }
+  #deleteModelBtn { margin-left: auto; }
+  #deleteModelBtn:hover, #deleteModelBtn:active { background: none; color: #e5401c; }
+  #loadModelBtn:hover, #loadModelBtn:active { background: none; color: var(--text); }
+  #deleteModelBtn:disabled { opacity: 0.4; cursor: default; }
 
-  #deleteModelBtn:disabled { opacity: 0.4; }
-
-  #deleteModelBtn:disabled {
-    background: var(--panel);
-    color: var(--muted);
-    cursor: default;
+  /* Use: a green pill, like the train window's save */
+  #useModelBtn {
+    margin-left: 4px;
+    height: 48px;
+    padding: 0 28px;
+    border: var(--border) solid var(--line);
+    border-radius: 28px;
+    background: #2e9e4f;
+    color: #fff;
   }
 
-  #useModelBtn:hover  { background: #3f7ee3; }
-  #useModelBtn:active { background: #2860bb; }
+  #useModelBtn:hover  { background: #37b35b; }
+  #useModelBtn:active { background: #268642; }
 
   #useModelBtn:disabled {
-    background: var(--panel);
-    color: var(--muted);
+    background: #d6d2c8;
     cursor: default;
   }
 
@@ -1083,11 +1132,6 @@
   }
 
   .file-name.chosen { color: var(--text); }
-
-  #loadModelBtn {
-    width: 100%;
-    font-size: 15px;
-  }
 
   #confirmLoadBtn {
     background: #2e9e4f;
@@ -1136,6 +1180,7 @@
 <script src="/assets/riso-bg.js"></script>
 <script src="/assets/silk-bg.js"></script>
 <script src="/assets/equilux-bg.js"></script>
+<script src="/assets/chip-die.js"></script>
 </head>
 <body>
   <canvas id="bg"></canvas>
@@ -1352,32 +1397,21 @@
   </div>
   <!-- end flow stage -->
 
-  <div class="window" id="modelsWindow" hidden>
-    <div class="titlebar">
-      <span id="modelsTitle">models - MNIST</span>
-      <button class="close" aria-label="Close">
-        <svg width="8" height="8" viewBox="0 0 8 8">
-          <path d="M1 1 L7 7 M7 1 L1 7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </div>
+  <!-- Model picker: a dark overlay over the whole screen, the model cards on it and the viewed
+       model's details in a light card at the bottom. Esc or a click on the dark part closes it. -->
+  <div class="picker" id="modelsWindow" hidden>
+    <div class="picker-title" id="modelsTitle">models - MNIST</div>
+    <div class="model-grid" id="modelList"></div>
 
-    <div class="content">
-      <div class="col models-col">
-        <div class="label">Saved models</div>
-        <div class="model-grid" id="modelList"></div>
-        <button id="loadModelBtn">load weights from a file</button>
-      </div>
-
-      <div class="col model-details">
-        <div class="label">
-          <span id="detailName">no model</span>
-          <button id="deleteModelBtn">delete</button>
-        </div>
-        <div class="detail-desc" id="detailDesc"></div>
-        <div class="stat-grid" id="detailStats"></div>
+    <div class="model-details">
+      <div class="detail-head">
+        <span id="detailName">no model</span>
+        <button id="deleteModelBtn">delete</button>
+        <button id="loadModelBtn">+ load weights from a file</button>
         <button id="useModelBtn">use this model</button>
       </div>
+      <div class="detail-desc" id="detailDesc"></div>
+      <div class="stat-grid" id="detailStats"></div>
     </div>
   </div>
 
@@ -2076,6 +2110,7 @@
     document.addEventListener('keydown', e => {
       const dir = ARROWS[e.key];
       if (!dir || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+      if (!document.getElementById('modelsWindow').hidden) return;   // the model picker is open
       // Never steal keys from a text field or dropdown
       if (e.target.closest('input, textarea, select')) return;
       const next = focused.links.find(l => l.dx === dir[0] && l.dy === dir[1]);
@@ -2315,6 +2350,7 @@
 
   document.addEventListener('keydown', async e => {
     if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (!document.getElementById('modelsWindow').hidden) return;   // the model picker is open
     // Never steal keys from a text field
     if (e.target.closest('input, textarea, select')) return;
     const target = windowInFront();
@@ -2330,7 +2366,22 @@
   });
 
   // Models window: list of saved models; clicking one shows its details, "use this model" selects it
-  const modelsWindow = makeWindow(document.getElementById('modelsWindow'));
+  const modelsWindow = (() => {
+    const el = document.getElementById('modelsWindow');
+    const close = () => { el.hidden = true; };
+    // Clicks on the dark part close it: the overlay itself, or the gaps around the cards
+    el.addEventListener('click', e => {
+      if (e.target === el || e.target.id === 'modelList' || e.target.id === 'modelsTitle') close();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !el.hidden) close();
+    });
+    return {
+      // Above everything open so far; the load window opened from it comes after, so on top of it
+      open: () => { el.hidden = false; el.style.zIndex = ++topZ; },
+      close,
+    };
+  })();
   // Each test window has its own model box and its own selected model
   const modelBoxes = {
     'MNIST': {
@@ -2413,17 +2464,20 @@
       acc.textContent = pct(info?.results?.final_accuracy) ?? '';
       top.append(acc);
 
-      const arch = document.createElement('span');
-      arch.className = 'model-card-arch';
-      arch.textContent = info?.model ?? '';
-
-      const meta = document.createElement('span');
-      meta.className = 'model-card-meta';
-      meta.textContent = info?.args
-        ? `${info.args.epochs} ep · ${compact(info.args.trainset_size)} imgs · ${compact(info.parameters?.total ?? 0)} params`
+      // One short line under the name: what it is and how big; the rest is in the details card
+      const sub = document.createElement('span');
+      sub.className = 'model-card-sub';
+      sub.textContent = info
+        ? [info.model, info.parameters?.total && `${compact(info.parameters.total)} params`].filter(Boolean).join(' · ')
         : 'no info saved';
 
-      card.append(top, arch, meta);
+      const chip = document.createElement('canvas');
+      chip.className = 'model-chip';
+      // The list is built while the window may still be hidden, so the chip is drawn at a fixed size
+      // (the card inside its border) rather than measured
+      drawChipDie(chip, model, 234, 112);
+
+      card.append(chip, top, sub);
       card.addEventListener('click', () => viewModel(name));
       modelList.append(card);
     }
@@ -2437,6 +2491,7 @@
     detailName.textContent = model ? model.name : 'no model';
 
     detailDesc.textContent = info?.description || (model ? (info ? 'no description' : 'no info saved for this model') : '');
+    detailDesc.title = info?.description ?? '';
     detailDesc.classList.toggle('none', !info?.description);
 
     const stats = [
@@ -2463,6 +2518,7 @@
       v.className = 'stat-val';
       k.textContent = key;
       v.textContent = value ?? '–';
+      v.title = value ?? '';
       cell.append(k, v);
       return cell;
     }));

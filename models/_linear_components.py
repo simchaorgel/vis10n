@@ -1,6 +1,5 @@
 # Layers used by simple_mlp
 # Imports
-import einops
 import numpy as np
 import torch as t
 import torch.nn as nn

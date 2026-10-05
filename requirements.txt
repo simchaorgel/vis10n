@@ -6,4 +6,5 @@ einops
 fastapi
 uvicorn[standard]
 jaxtyping
-wandbpywebview
+wandb
+pywebview

@@ -1,5 +1,12 @@
 # vis10n server: serves the UI and exposes the API the windows talk to
-# Run with: python main.py
+# Run with: python main.py (opens the desktop window; uvicorn imports this module as the server)
+
+if __name__ == "__main__":
+    # Open the window before the heavy imports below, so it appears at once; the server process imports them itself
+    from launcher import run
+    run()
+    raise SystemExit
+
 import asyncio
 import importlib
 import json
@@ -8,8 +15,6 @@ import subprocess
 import threading
 import time
 import traceback
-import urllib.request
-import webbrowser
 from dataclasses import asdict, fields
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +30,7 @@ from dataloaders import cifar, imagenet
 from models import get_model
 from models import list_models as list_architectures
 from optimizers import list_optimizers
+from dream import dream
 from predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
 from device import device
 from training.train_mnist_mlp import SimpleMLPTrainingArgs, train
@@ -333,6 +339,58 @@ async def predict_uploaded_photo(request: Request, model: str, dataset: str = "I
     return result
 
 
+class DreamRequest(BaseModel):
+    model: str
+    digit: int
+    # Constraints on the image; all off is pure gradient ascent on the pixels
+    sparse: bool = True
+    smooth: bool = True
+    jitter: bool = True
+    clamp: bool = True
+
+
+@app.post("/api/dream")
+def dream_digit(req: DreamRequest):
+    """Optimises an image (not the weights) to maximise one digit's score, showing what the model looks for."""
+    path = WEIGHTS_DIR / f"{req.model}.pt"
+    info_path = path.with_suffix(".json")
+    if not re.fullmatch(r"[\w\- ]+", req.model) or not path.exists():
+        raise HTTPException(404, "model not found")
+    if not info_path.exists():
+        raise HTTPException(400, "no info file")
+    if not 0 <= req.digit <= 9:
+        raise HTTPException(400, "digit must be 0-9")
+
+    try:
+        info = json.loads(info_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(400, "could not read info file")
+
+    trained_on = info.get("dataset", "MNIST")
+    if trained_on != "MNIST":
+        raise HTTPException(400, f"model predicts {trained_on}")
+
+    mtime = path.stat().st_mtime
+    if loaded["path"] != path or loaded["mtime"] != mtime:
+        try:
+            loaded.update(path=path, mtime=mtime, model=load_model(path, info["model"]))
+        except Exception:
+            traceback.print_exc()
+            raise HTTPException(500, "could not load model")
+
+    # Off means the argument's "no effect" value; on keeps dream()'s default
+    constraints = {}
+    if not req.sparse:
+        constraints["l2_weight"] = 0
+    if not req.smooth:
+        constraints["tv_weight"] = 0
+    if not req.jitter:
+        constraints["jitter"] = 0
+
+    pixels, probabilities = dream(loaded["model"], req.digit, clamp=req.clamp, **constraints)
+    return {"pixels": pixels, "probabilities": probabilities}
+
+
 class SaveRequest(BaseModel):
     name: str
     description: str = ""
@@ -500,23 +558,3 @@ def save_model(req: SaveRequest):
     path.with_suffix(".json").write_text(json.dumps(model_info(name, req.description, latest_run), indent=2))
 
     return {"ok": True, "path": str(path.relative_to(ROOT))}
-
-
-def open_browser_when_ready(url: str):
-    """Waits for the server to answer, then opens the app in the default browser."""
-    for _ in range(120):
-        try:
-            urllib.request.urlopen(f"{url}/api/ping", timeout=1)
-        except OSError:
-            time.sleep(0.5)
-            continue
-        webbrowser.open(url)
-        return
-
-
-if __name__ == "__main__":
-    # Only runs once here, so reloads after code changes don't open more tabs
-    threading.Thread(target=open_browser_when_ready, args=("http://127.0.0.1:8000",), daemon=True).start()
-
-    # Reload needs the app as an import string rather than the object
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

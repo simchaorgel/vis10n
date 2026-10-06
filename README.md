@@ -4,8 +4,8 @@
   <img src="assets/screenshots/screenshot2.png" width="49%">
 </p>
 <p>
-  <img src="assets/screenshots/screenshot3.png" width="49%">
   <img src="assets/screenshots/screenshot4.png" width="49%">
+  <img src="assets/screenshots/screenshot6.png" width="49%">
 </p>
 This project is my playground for messing with training and running different types of neural networks, so far including MNIST digit classification, CIFAR image classification, and chess policy models (playing the next move).
 Parts of the model code are based off the ARENA (https://arena.education) courses implementation.

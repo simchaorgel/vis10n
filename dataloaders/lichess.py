@@ -13,7 +13,8 @@ PROCESSED_DIR = DATA_DIR / "chess" / "processed"
 def get_lichess(trainset_size: int = 900_000, testset_size: int = 100_000) -> tuple[TensorDataset, TensorDataset]:
     """
     Returns (trainset, testset) of (board, move) pairs.
-    board: (12, 8, 8) uint8 - call .float() on each batch before the model
+    board: (8, 8) uint8 piece numbers - 0 empty, 1-6 the side to move's pieces, 7-12 the opponent's.
+           Expand each batch to the model's (12, 8, 8) planes on the GPU (one_hot, drop the empty class)
     move: int64 index 0-1791
     The split is by game, so no game has positions in both sets.
     """

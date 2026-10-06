@@ -546,6 +546,167 @@
 
   #dreamCanvas { cursor: default; }
 
+  /* Chess boards: 8x8 squares drawn from a FEN, pieces as text glyphs. --sq is one square's size. */
+  .board-box { --sq: calc(var(--square) / 8); }
+  .board-box.big {
+    --sq: 56px;
+    width: calc(var(--sq) * 8 + var(--border) * 2);
+    height: calc(var(--sq) * 8 + var(--border) * 2);
+  }
+
+  /* Square and highlight colours; the play window takes its own from its cyanotype background */
+  .chess-board {
+    --light: #f3efe6;
+    --dark: #9fb0b8;
+    --mark: 47, 111, 214;   /* rgb of the highlights and move dots */
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(8, var(--sq));
+    grid-template-rows: repeat(8, var(--sq));
+    user-select: none;
+  }
+
+  /* Layers, top to bottom: the piece (set per square as --piece), the highlight tint, the square colour */
+  .chess-board > div {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    --tint: transparent;
+    background:
+      var(--piece, none) center / 100% no-repeat,
+      linear-gradient(var(--tint), var(--tint)),
+      var(--base);
+  }
+
+  #chessBoard {
+    --light: #eaf2f8;
+    --dark: #70a6d6;
+    --mark: 22, 50, 92;     /* the background's ink */
+    isolation: isolate;     /* keeps the painted squares below inside the board */
+  }
+
+  /* The play board's squares are painted with grain like the window behind it (see BOARD_TEXTURE),
+     so the square cells themselves only carry the highlights and pieces */
+  #chessBoard > .light, #chessBoard > .dark { --base: transparent; }
+
+  .board-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .chess-board > .light { --base: var(--light); }
+  .chess-board > .dark  { --base: var(--dark); }
+
+  .chess-board > .last     { --tint: rgba(var(--mark), 0.22); }
+  .chess-board > .selected { --tint: rgba(var(--mark), 0.42); }
+
+  /* A piece sliding to its new square, drawn over the board while it moves */
+  .chess-board > .floating-piece {
+    position: absolute;
+    width: var(--sq);
+    height: var(--sq);
+    --base: transparent;
+    pointer-events: none;
+    z-index: 1;
+    transition: transform 0.2s ease-out;
+  }
+
+  /* Where the selected piece can go: a dot on an empty square, a ring around a capture */
+  .chess-board > .target::after {
+    content: "";
+    position: absolute;
+    width: 30%;
+    height: 30%;
+    border-radius: 50%;
+    background: rgba(var(--mark), 0.5);
+  }
+  .chess-board > .target.occupied::after {
+    width: 88%;
+    height: 88%;
+    background: none;
+    box-sizing: border-box;
+    border: calc(var(--sq) / 12) solid rgba(var(--mark), 0.5);
+  }
+
+  /* Play window: a single row, so no empty rows above and below the board */
+  .chess-flow { grid-template-rows: auto; }
+
+  /* The two buttons stacked, as pills like the dream button */
+  .chess-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .chess-controls > button { border-radius: 999px; }
+
+  /* A move like Nxf3+ or a rating fits at this size */
+  .output-digit.move { font-size: 64px; letter-spacing: 0; }
+
+  /* Second line in an output box, along the bottom: the match's wins, draws and losses */
+  .output-box .tally {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Match settings: a row of two across the top, like the dream toggles */
+  #eloSettings {
+    grid-area: 1 / 1 / 2 / 6;
+    justify-self: stretch;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #eloSettings label {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  #eloSettings input {
+    width: 80px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 4px 0;
+    background: none;
+    color: var(--text);
+    font: 700 15px ui-monospace, Consolas, monospace;
+    text-align: right;
+  }
+
+  #eloSettings input:focus { border-bottom-color: var(--accent); }
+
+  #eloSettings.running { pointer-events: none; opacity: 0.6; }
+
+  /* Greyed out until a match has given a rating */
+  #eloSaveBtn:disabled {
+    background: #d6d2c8;
+    color: #fff;
+    cursor: default;
+  }
+
+  #eloStartBtn.running        { background: #e5401c; }
+  #eloStartBtn.running:hover  { background: #f25531; }
+  #eloStartBtn.running:active { background: #c93414; }
+
   /* Training window */
   .swatch {
     display: inline-block;
@@ -1198,6 +1359,7 @@
             <li><button id="openTestBtn">MNIST test</button></li>
             <li><button id="openSetBtn">CIFAR test</button></li>
             <li><button id="openNetBtn">IMAGENET test</button></li>
+            <li><button id="openChessBtn">CHESS play</button></li>
           </ul>
         </section>
         <section>
@@ -1210,6 +1372,7 @@
           <h2>Lab</h2>
           <ul>
             <li><button id="openDreamBtn">MNIST dream</button></li>
+            <li><button id="openEloBtn">CHESS elo</button></li>
           </ul>
         </section>
       </nav>
@@ -1342,6 +1505,71 @@
     </div>
   </div>
 
+  <div class="window themed" id="chessWindow">
+    <canvas class="win-bg"></canvas>
+    <div class="titlebar">
+      <span>CHESS play</span>
+    </div>
+
+    <!-- One row, no connecting lines: the buttons on the left, the board in the middle, the model on the right -->
+    <div class="flow chess-flow">
+      <div class="chess-controls" style="grid-area: 1 / 1">
+        <button class="flow-box btn clear" id="chessNewBtn">new game</button>
+        <button class="flow-box btn shuffle" id="chessSideBtn">playing white</button>
+      </div>
+
+      <div class="flow-box board-box big" style="grid-area: 1 / 3">
+        <div class="chess-board" id="chessBoard"><canvas class="board-bg"></canvas></div>
+      </div>
+
+      <button class="flow-box model-box empty" id="chessModelBtn" style="grid-area: 1 / 5">
+        <span class="model-name" id="chessModelName">select model</span>
+        <span class="model-stats" id="chessModelStats"></span>
+        <span class="model-arch" id="chessModelArch"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="window themed" id="eloWindow">
+    <canvas class="win-bg"></canvas>
+    <div class="titlebar">
+      <span>CHESS elo</span>
+    </div>
+
+    <div class="flow">
+      <div class="flow-box toggles at-top-left" id="eloSettings">
+        <label>stockfish elo<input id="eloOpponent" type="number" value="1320" min="1320" step="10"></label>
+        <label>games<input id="eloGames" type="number" value="50" min="1" step="1"></label>
+      </div>
+      <div class="flow-link down" style="grid-area: 2 / 1"></div>
+      <div class="flow-box board-box at-input">
+        <div class="chess-board" id="eloBoard"></div>
+      </div>
+      <div class="flow-link down" style="grid-area: 4 / 1"></div>
+      <div class="flow-box btn at-under-input" id="eloProgress">no games yet</div>
+
+      <div class="flow-link" style="grid-area: 3 / 2"></div>
+      <button class="flow-box model-box empty at-model" id="eloModelBtn">
+        <span class="model-name" id="eloModelName">select model</span>
+        <span class="model-stats" id="eloModelStats"></span>
+        <span class="model-arch" id="eloModelArch"></span>
+      </button>
+      <div class="flow-link" style="grid-area: 3 / 4"></div>
+
+      <div class="flow-box output-box at-output">
+        <div class="output-digit move" id="eloValue"></div>
+        <span class="conf-value" id="eloRange"></span>
+        <span class="tally" id="eloTally"></span>
+      </div>
+      <div class="flow-link down" style="grid-area: 4 / 5"></div>
+      <button class="flow-box btn submit at-under-output" id="eloStartBtn">start match</button>
+
+      <!-- Saves the rating into the model it was measured for -->
+      <div class="flow-link down" style="grid-area: 4 / 3"></div>
+      <button class="flow-box btn shuffle" id="eloSaveBtn" style="grid-area: 5 / 3" disabled>save elo</button>
+    </div>
+  </div>
+
   <div class="window themed" id="trainWindow">
     <canvas class="win-bg"></canvas>
     <div class="titlebar">
@@ -1452,6 +1680,7 @@
             <option value="MNIST">MNIST</option>
             <option value="CIFAR-10">CIFAR-10</option>
             <option value="ImageNet">ImageNet</option>
+            <option value="Lichess">Lichess (chess moves)</option>
           </select>
         </div>
 
@@ -1970,6 +2199,8 @@
     ['#netWindow > .win-bg',   c => paintRisoBg(c, RISO_PRESETS.dark)],                   // IMAGENET test
     ['#trainWindow > .win-bg', c => paintEquiluxBg(c, EQUILUX_PRESETS.equilux, trainSeed)], // MNIST train
     ['#dreamWindow > .win-bg', c => paintSilkBg(c, SILK_PRESETS.silk, dreamSeed)],          // MNIST dream
+    ['#chessWindow > .win-bg', c => paintGrainBg(c, PRESETS.cyanotype)],                  // CHESS play
+    ['#eloWindow > .win-bg',   c => paintGrainBg(c, PRESETS.bloom)],                      // CHESS elo
   ];
   for (const [selector, paint] of BACKGROUNDS) mountCanvasBg(document.querySelector(selector), paint);
 
@@ -1987,7 +2218,9 @@
       { id: 'setWindow',   x: -1, y: -1 },
       { id: 'netWindow',   x: -1, y: 1 },
       { id: 'trainWindow', x: 0,  y: 1 },
+      { id: 'chessWindow', x: -1, y: 2 },
       { id: 'dreamWindow', x: 1,  y: 0 },
+      { id: 'eloWindow',   x: 1,  y: 1 },
     ];
 
     const stage = document.getElementById('flowStage');
@@ -2137,6 +2370,8 @@
   document.getElementById('openNetBtn').addEventListener('click', () => flow.go('netWindow'));
   document.getElementById('openTrainBtn').addEventListener('click', () => flow.go('trainWindow'));
   document.getElementById('openDreamBtn').addEventListener('click', () => flow.go('dreamWindow'));
+  document.getElementById('openChessBtn').addEventListener('click', () => flow.go('chessWindow'));
+  document.getElementById('openEloBtn').addEventListener('click', () => flow.go('eloWindow'));
 
   // Pick up architectures and optimizers added since the page loaded
   flow.onFocus.trainWindow = () => Promise.all([refreshArchitectures(), refreshOptimizers()]);
@@ -2402,6 +2637,12 @@
       stats: document.getElementById('netModelStats'),
       arch: document.getElementById('netModelArch'),
     },
+    'Lichess': {
+      btn: document.getElementById('chessModelBtn'),
+      name: document.getElementById('chessModelName'),
+      stats: document.getElementById('chessModelStats'),
+      arch: document.getElementById('chessModelArch'),
+    },
   };
   const modelList = document.getElementById('modelList');
   const detailName = document.getElementById('detailName');
@@ -2412,7 +2653,7 @@
 
   let models = [];            // [{ name, info }] from the server; info is null for older models
   let viewedModel = null;     // clicked in the list
-  const selected = { 'MNIST': null, 'CIFAR-10': null, 'ImageNet': null };  // per dataset
+  const selected = { 'MNIST': null, 'CIFAR-10': null, 'ImageNet': null, 'Lichess': null };  // per dataset
   let pickerDataset = 'MNIST';  // what the window was opened for; only these models are listed
 
   // Models saved before the dataset was recorded are all MNIST
@@ -2422,6 +2663,9 @@
   const pct = v => (v == null ? null : `${(v * 100).toFixed(1)}%`);
   const num = v => (v == null ? null : Number(v).toLocaleString());
   const compact = v => (v >= 1000 ? `${+(v / 1000).toFixed(1)}k` : `${v}`);
+
+  // A chess model's saved rating (from the elo window), shown in place of its accuracy
+  const eloOf = info => info?.results?.elo ?? null;
 
   // One box per model: name, accuracy, architecture and a line of basic numbers
   function renderModelList() {
@@ -2435,10 +2679,13 @@
       return;
     }
 
-    // Whichever listed model scored highest gets the ring
-    const accuracyOf = m => m.info?.results?.final_accuracy ?? -1;
-    const best = listed.reduce((a, b) => (accuracyOf(b) > accuracyOf(a) ? b : a));
-    const bestName = accuracyOf(best) > 0 ? best.name : null;
+    // Whichever listed model scored highest gets the ring: by rating once any of them has one
+    const rated = listed.some(m => eloOf(m.info));
+    const scoreOf = rated
+      ? m => eloOf(m.info)?.elo ?? -1
+      : m => m.info?.results?.final_accuracy ?? -1;
+    const best = listed.reduce((a, b) => (scoreOf(b) > scoreOf(a) ? b : a));
+    const bestName = scoreOf(best) > 0 ? best.name : null;
 
     for (const model of listed) {
       const { name, info } = model;
@@ -2461,7 +2708,8 @@
       }
       const acc = document.createElement('span');
       acc.className = 'model-card-acc';
-      acc.textContent = pct(info?.results?.final_accuracy) ?? '';
+      const elo = eloOf(info);
+      acc.textContent = elo ? `${Math.round(elo.elo)} elo` : pct(info?.results?.final_accuracy) ?? '';
       top.append(acc);
 
       // One short line under the name: what it is and how big; the rest is in the details card
@@ -2478,6 +2726,7 @@
       drawChipDie(chip, model, 234, 112);
 
       card.append(chip, top, sub);
+      card.dataset.name = name;
       card.addEventListener('click', () => viewModel(name));
       modelList.append(card);
     }
@@ -2494,10 +2743,21 @@
     detailDesc.title = info?.description ?? '';
     detailDesc.classList.toggle('none', !info?.description);
 
+    // A rated chess model shows its rating and the match it came from in place of the two accuracies
+    const elo = eloOf(info);
+    const scores = elo
+      ? [
+          ['elo', `${Math.round(elo.elo)} (${Math.round(elo.low)}–${Math.round(elo.high)})`],
+          ['elo match', `${elo.games} games vs ${elo.opponent}`],
+        ]
+      : [
+          ['final acc', pct(results?.final_accuracy)],
+          ['best acc', pct(results?.best_accuracy)],
+        ];
+
     const stats = [
       ['predicts', info ? datasetOf(model) : null],
-      ['final acc', pct(results?.final_accuracy)],
-      ['best acc', pct(results?.best_accuracy)],
+      ...scores,
       ['final loss', results?.final_loss?.toFixed(3)],
       ['params', num(parameters?.total)],
       ['epochs', args?.epochs],
@@ -2575,13 +2835,20 @@
     await refreshModels();
   });
 
-  // Other windows showing the same dataset's selected model (the dream window uses MNIST's)
+  // Other windows showing the same dataset's selected model (the dream window uses MNIST's,
+  // the elo window the chess one's)
   const sharedModelBoxes = {
     'MNIST': [{
       btn: document.getElementById('dreamModelBtn'),
       name: document.getElementById('dreamModelName'),
       stats: document.getElementById('dreamModelStats'),
       arch: document.getElementById('dreamModelArch'),
+    }],
+    'Lichess': [{
+      btn: document.getElementById('eloModelBtn'),
+      name: document.getElementById('eloModelName'),
+      stats: document.getElementById('eloModelStats'),
+      arch: document.getElementById('eloModelArch'),
     }],
   };
 
@@ -2599,14 +2866,18 @@
     box.btn.classList.toggle('empty', !name);
     box.arch.textContent = info?.model ?? '';
 
-    const acc = pct(info?.results?.final_accuracy);
+    // A rated chess model shows its rating instead of its accuracy
+    const elo = eloOf(info);
+    const score = elo
+      ? [`${Math.round(elo.elo)}`, ' elo']
+      : [pct(info?.results?.final_accuracy), ' accuracy'];
     const params = info?.parameters?.total;
     box.stats.replaceChildren();
-    if (acc) {
+    if (score[0]) {
       const value = document.createElement('b');
-      value.textContent = acc;
+      value.textContent = score[0];
       const line = document.createElement('span');
-      line.append(value, ' accuracy');
+      line.append(value, score[1]);
       box.stats.append(line);
     }
     if (params != null) {
@@ -2622,12 +2893,18 @@
     renderDetails();
   }
 
-  useModelBtn.addEventListener('click', () => {
-    if (!viewedModel) return;
-    selected[pickerDataset] = viewedModel;
+  // The use button, or a double click on a card
+  function useModel(name) {
+    if (!name) return;
+    selected[pickerDataset] = name;
     renderModelBox(pickerDataset);
     modelsWindow.close();
-  });
+  }
+
+  useModelBtn.addEventListener('click', () => useModel(viewedModel));
+
+  // Listened for on the list, since the first click of the two redraws the cards
+  modelList.addEventListener('dblclick', e => useModel(e.target.closest('.model-card')?.dataset.name));
 
   async function refreshModels() {
     try {
@@ -2656,6 +2933,8 @@
   modelBoxes['CIFAR-10'].btn.addEventListener('click', () => openModelPicker('CIFAR-10'));
   modelBoxes['ImageNet'].btn.addEventListener('click', () => openModelPicker('ImageNet'));
   sharedModelBoxes['MNIST'][0].btn.addEventListener('click', () => openModelPicker('MNIST'));
+  modelBoxes['Lichess'].btn.addEventListener('click', () => openModelPicker('Lichess'));
+  sharedModelBoxes['Lichess'][0].btn.addEventListener('click', () => openModelPicker('Lichess'));
 
   // Load window: takes a weights file trained elsewhere plus the details we can't read
   // off it, and hands both to the server
@@ -2933,6 +3212,391 @@
       flashDream('failed');
     }
   });
+
+  // Chess boards: drawn from a FEN. The page knows no chess rules; the server sends the legal moves.
+  const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+  // Piece images (assets/pieces, the california set): wK.svg is the white king, bP.svg a black pawn
+  const pieceImage = piece => {
+    const color = piece === piece.toUpperCase() ? 'w' : 'b';
+    return `url('/assets/pieces/${color}${piece.toUpperCase()}.svg')`;
+  };
+
+  // { square name: piece letter }, uppercase for white
+  function parseFen(fen) {
+    const pieces = {};
+    fen.split(' ')[0].split('/').forEach((row, i) => {
+      let file = 0;
+      for (const ch of row) {
+        if (/\d/.test(ch)) file += Number(ch);
+        else pieces[`${'abcdefgh'[file++]}${8 - i}`] = ch;
+      }
+    });
+    return pieces;
+  }
+
+  function makeBoard(board) {
+    const squares = Array.from({ length: 64 }, () => board.appendChild(document.createElement('div')));
+    let flipped = false;
+
+    // Square shown at grid cell i: rank 8 along the top, or rank 1 when flipped for black
+    function squareAt(i) {
+      const row = Math.floor(i / 8), col = i % 8;
+      const file = flipped ? 7 - col : col;
+      const rank = flipped ? row : 7 - row;
+      return { name: `${'abcdefgh'[file]}${rank + 1}`, light: (file + rank) % 2 === 1 };
+    }
+
+    let floating = null;   // a piece mid-slide, see slide()
+
+    // pending: [from, to] of a move sent but not answered yet, shown moved already
+    // animate: [from, to] of a move already in the position, to show sliding in
+    function draw(fen, { last = null, selected = null, targets = [], pending = null, animate = null } = {}) {
+      floating?.finish();
+      const pieces = parseFen(fen);
+      if (pending) {
+        pieces[pending[1]] = pieces[pending[0]];
+        delete pieces[pending[0]];
+      }
+      squares.forEach((sq, i) => {
+        const { name, light } = squareAt(i);
+        const piece = pieces[name];
+        sq.dataset.square = name;
+        sq.style.setProperty('--piece', piece ? pieceImage(piece) : 'none');
+        sq.className = light ? 'light' : 'dark';
+        if (piece) sq.classList.add('occupied');
+        if ((pending ?? last)?.includes(name)) sq.classList.add('last');
+        if (name === selected) sq.classList.add('selected');
+        if (targets.includes(name)) sq.classList.add('target');
+      });
+      if (animate) slide(...animate);
+    }
+
+    // The piece now on `to` is hidden there and drawn moving over from `from`, then shown again
+    const SLIDE_MS = 200;   // matches .floating-piece's transition
+    function slide(from, to) {
+      const fromSq = squares.find(sq => sq.dataset.square === from);
+      const toSq = squares.find(sq => sq.dataset.square === to);
+      const piece = toSq.style.getPropertyValue('--piece');
+      if (!piece || piece === 'none') return;
+
+      const el = document.createElement('div');
+      el.className = 'floating-piece';
+      el.style.setProperty('--piece', piece);
+      el.style.left = `${fromSq.offsetLeft}px`;
+      el.style.top = `${fromSq.offsetTop}px`;
+      toSq.style.setProperty('--piece', 'none');
+      board.append(el);
+
+      // Lay it out at the start first, so the move to the end square is a transition
+      el.getBoundingClientRect();
+      el.style.transform = `translate(${toSq.offsetLeft - fromSq.offsetLeft}px, ${toSq.offsetTop - fromSq.offsetTop}px)`;
+
+      // A timer rather than transitionend, which never comes if the board isn't being drawn
+      const timer = setTimeout(() => floating?.finish(), SLIDE_MS + 30);
+      floating = {
+        finish() {
+          clearTimeout(timer);
+          toSq.style.setProperty('--piece', piece);
+          el.remove();
+          floating = null;
+        },
+      };
+    }
+
+    return { draw, setFlipped: value => { flipped = value; } };
+  }
+
+  // Play window: you against the selected model. Promotions are always to a queen, like the model's.
+  const chessBoard = makeBoard(document.getElementById('chessBoard'));
+
+  // The play board's texture: a grain-bg preset (see assets/grain-bg.js), so it gets the same film
+  // grain as the cyanotype window around it. The light squares are the base, the dark squares solid
+  // blocks, and a few big blurred blocks on top are faint uneven ink, like the background's.
+  // Square colours come from the board's CSS (--light, --dark, --mark).
+  const BOARD_TEXTURE = (() => {
+    const css = getComputedStyle(document.getElementById('chessBoard'));
+    const rgb = name => {
+      const hex = css.getPropertyValue(name).trim().slice(1);
+      return [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+    };
+    const ink = css.getPropertyValue('--mark').split(',').map(Number);
+
+    // a1 is dark; every square whose file + rank is even is too. The pattern is the same flipped.
+    const squares = [];
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        if ((col + 7 - row) % 2 === 0) {
+          squares.push({ x: col / 8, y: row / 8, w: 1 / 8, h: 1 / 8, c: rgb('--dark'), a: 1, blur: 0 });
+        }
+      }
+    }
+
+    return {
+      base: rgb('--light'),
+      grain: 16,
+      darkGrain: 0.6,
+      blobs: [],
+      rects: [
+        ...squares,
+        { x: -0.1, y: -0.1, w: 0.55, h: 0.5,  c: ink,           a: 0.10, blur: 0.12 },  // ink, top left
+        { x: 0.55, y: 0.6,  w: 0.55, h: 0.5,  c: ink,           a: 0.12, blur: 0.12 },  // ink, bottom right
+        { x: 0.55, y: 0.05, w: 0.35, h: 0.35, c: [255, 255, 255], a: 0.10, blur: 0.10 }, // pale wash, top right
+      ],
+    };
+  })();
+  mountCanvasBg(document.querySelector('#chessBoard > .board-bg'), c => paintGrainBg(c, BOARD_TEXTURE));
+  const chessNewBtn = document.getElementById('chessNewBtn');
+  const chessSideBtn = document.getElementById('chessSideBtn');
+  const chess ={ fen: START_FEN, legal: [], last: null, status: null, side: 'w', selected: null, pending: null };
+  let chessRequest = 0;
+
+  // animate: [from, to] of a move to show sliding into place
+  function drawChess(animate = null) {
+    const { fen, last, selected, pending, legal } = chess;
+    const targets = selected ? legal.filter(m => m.startsWith(selected)).map(m => m.slice(2, 4)) : [];
+    chessBoard.draw(fen, { last, selected, targets, pending, animate });
+  }
+
+  // The new game button says how the game ended until the next one starts, and flashes errors
+  const chessNewLabel = () => {
+    if (!chess.status) return 'new game';
+    const [how, who] = chess.status.split(' - ');   // e.g. "checkmate - white wins", "draw - stalemate"
+    if (how === 'draw') return `draw - ${who}`;
+    return who.startsWith(chess.side === 'w' ? 'white' : 'black') ? 'you win!' : 'model wins';
+  };
+
+  function flashChess(text) {
+    chessNewBtn.textContent = text;
+    setTimeout(() => { chessNewBtn.textContent = chessNewLabel(); }, 1500);
+  }
+
+  // Sends a position (and the player's move, if any) and takes on the position that comes back
+  async function chessPlay(body) {
+    const id = ++chessRequest;
+    let animate = null;
+
+    try {
+      // The player's own move slides first, so the reply waits for it to land
+      const [res] = await Promise.all([
+        fetch('/api/chess/play', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+        body.move ? new Promise(resolve => setTimeout(resolve, 220)) : null,
+      ]);
+      const data = await res.json();
+      if (id !== chessRequest) return;
+
+      chess.pending = null;
+      if (!res.ok) {
+        flashChess(typeof data.detail === 'string' ? data.detail : 'failed');
+        return;
+      }
+      Object.assign(chess, { fen: data.fen, legal: data.legal, last: data.last, status: data.status });
+      chessNewBtn.textContent = chessNewLabel();
+      if (data.reply) animate = data.last;
+    } catch (err) {
+      if (id !== chessRequest) return;
+      console.error('chess move failed:', err);
+      chess.pending = null;
+      flashChess('failed');
+    } finally {
+      if (id === chessRequest) drawChess(animate);
+    }
+  }
+
+  function newGame() {
+    chessRequest++;   // drop any reply still on its way
+    Object.assign(chess, { fen: START_FEN, legal: [], last: null, status: null, selected: null, pending: null });
+    chessNewBtn.textContent = chessNewLabel();
+    chessBoard.setFlipped(chess.side === 'b');
+    drawChess();
+
+    // Playing black, the model opens
+    if (chess.side === 'b') {
+      if (!selected['Lichess']) return flashChess('pick a model');
+      chessPlay({ fen: START_FEN, model: selected['Lichess'] });
+    } else {
+      chessPlay({ fen: START_FEN, reply: false });
+    }
+  }
+
+  chessNewBtn.addEventListener('click', newGame);
+
+  chessSideBtn.addEventListener('click', () => {
+    chess.side = chess.side === 'w' ? 'b' : 'w';
+    chessSideBtn.textContent = chess.side === 'w' ? 'playing white' : 'playing black';
+    newGame();
+  });
+
+  // Click a piece to see where it can go, then click where to move it
+  document.getElementById('chessBoard').addEventListener('click', e => {
+    const square = e.target.closest('[data-square]')?.dataset.square;
+    const yourTurn = chess.fen.split(' ')[1] === chess.side;
+    if (!square || chess.status || chess.pending || !yourTurn) return;
+
+    const from = chess.selected;
+    const moves = from ? chess.legal.filter(m => m.slice(0, 4) === from + square) : [];
+    if (moves.length) {
+      if (!selected['Lichess']) return flashChess('pick a model');
+      // A pawn reaching the last rank has a move per piece; take the queen
+      const move = moves.find(m => m.length === 4 || m.endsWith('q'));
+      chess.selected = null;
+      chess.pending = [from, square];
+      drawChess(chess.pending);
+      chessPlay({ fen: chess.fen, model: selected['Lichess'], move });
+      return;
+    }
+
+    // Select one of your pieces (clicking it again lets go)
+    const ownPiece = chess.legal.some(m => m.startsWith(square));
+    chess.selected = ownPiece && square !== from ? square : null;
+    drawChess();
+  });
+
+  newGame();
+
+  // Elo window: a match against Stockfish held to a set rating. The score gives the model's rating,
+  // with a 95% range that narrows as more games are played.
+  const eloBoard = makeBoard(document.getElementById('eloBoard'));
+  const eloStartBtn = document.getElementById('eloStartBtn');
+  const eloSettings = document.getElementById('eloSettings');
+  const eloProgress = document.getElementById('eloProgress');
+  const eloValue = document.getElementById('eloValue');
+  const eloRange = document.getElementById('eloRange');
+  const eloTally = document.getElementById('eloTally');
+  let eloSocket = null;
+  let eloPosition = null;   // latest move update, drawn once per frame
+  // The last match's latest rating and what it was measured with: { model, opponent, update }
+  let eloResult = null;
+  const eloSaveBtn = document.getElementById('eloSaveBtn');
+
+  // Saving needs a finished (or stopped) match with an actual number, not "<1320"
+  function refreshEloSave() {
+    eloSaveBtn.disabled = !eloResult || eloResult.update.elo == null || !!eloSocket;
+  }
+
+  async function saveElo() {
+    const { model, opponent, update } = eloResult;
+    const flash = text => {
+      eloSaveBtn.textContent = text;
+      setTimeout(() => { eloSaveBtn.textContent = 'save elo'; }, 1500);
+    };
+    try {
+      const res = await fetch(`/api/models/${encodeURIComponent(model)}/elo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          elo: update.elo, low: update.low, high: update.high, opponent,
+          games: update.game, wins: update.wins, draws: update.draws, losses: update.losses,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) return flash(typeof data.detail === 'string' ? data.detail : 'failed');
+      flash('saved');
+      await refreshModels();   // the model boxes and cards show the new rating
+    } catch (err) {
+      console.error('saving elo failed:', err);
+      flash('failed');
+    }
+  }
+
+  eloSaveBtn.addEventListener('click', saveElo);
+
+  eloBoard.draw(START_FEN);
+
+  function setEloRunning(running) {
+    eloStartBtn.classList.toggle('running', running);
+    eloStartBtn.textContent = running ? 'stop match' : 'start match';
+    eloSettings.classList.toggle('running', running);
+    refreshEloSave();
+  }
+
+  function flashElo(text) {
+    eloStartBtn.textContent = text;
+    setTimeout(() => setEloRunning(!!eloSocket), 1500);
+  }
+
+  function showEloGame(update, opponent, model) {
+    eloResult = { model, opponent, update };
+    eloProgress.textContent = `${update.game} / ${update.games} played`;
+    eloTally.textContent = `${update.wins} won · ${update.draws} drawn · ${update.losses} lost`;
+    if (update.elo != null) {
+      eloValue.textContent = Math.round(update.elo);
+      eloRange.textContent = `${Math.round(update.low)} – ${Math.round(update.high)}`;
+    } else {
+      // All lost or all won: the rating is only known to be below or above the opponent's
+      eloValue.textContent = update.score === 0 ? `<${opponent}` : `>${opponent}`;
+      eloRange.textContent = update.score === 0 ? 'lost every game' : 'won every game';
+    }
+  }
+
+  function endMatch() {
+    if (eloSocket) eloSocket.close();
+    eloSocket = null;
+    setEloRunning(false);
+  }
+
+  function startMatch() {
+    if (!selected['Lichess']) return flashElo('pick a model');
+    const opponent = Number(document.getElementById('eloOpponent').value);
+    const games = Number(document.getElementById('eloGames').value);
+
+    eloValue.textContent = '';
+    eloRange.textContent = '';
+    eloTally.textContent = '';
+    eloProgress.textContent = `0 / ${games} played`;
+    eloBoard.draw(START_FEN);
+    eloResult = null;
+
+    const socket = new WebSocket(`ws://${location.host}/ws/elo`);
+    eloSocket = socket;
+    setEloRunning(true);
+
+    // Kept, so the rating is saved to the model it was measured for even if another is picked since
+    const model = selected['Lichess'];
+    socket.onopen = () => socket.send(JSON.stringify({ type: 'start', model, elo: opponent, games }));
+    socket.onmessage = e => {
+      if (socket !== eloSocket) return;
+      const update = JSON.parse(e.data);
+      switch (update.type) {
+        case 'move':
+          // The board faces the model's side; moves come faster than frames, so only the latest is drawn
+          if (!eloPosition) requestAnimationFrame(() => {
+            eloBoard.setFlipped(!eloPosition.model_white);
+            eloBoard.draw(eloPosition.fen, { last: eloPosition.last });
+            eloPosition = null;
+          });
+          eloPosition = update;
+          break;
+        case 'game':
+          showEloGame(update, opponent, model);
+          break;
+        case 'done':
+          endMatch();
+          break;
+        case 'error':
+          console.error('match error:', update.message);
+          endMatch();
+          flashElo(update.message);
+          break;
+      }
+    };
+    socket.onclose = () => {
+      if (socket === eloSocket) endMatch();
+    };
+  }
+
+  function stopMatch() {
+    if (eloSocket && eloSocket.readyState === WebSocket.OPEN) {
+      eloSocket.send(JSON.stringify({ type: 'cancel' }));
+    }
+    endMatch();
+  }
+
+  eloStartBtn.addEventListener('click', () => (eloSocket ? stopMatch() : startMatch()));
 
   // Reveal the app once the fonts are in, since they change the windows' sizes (at most a second's wait)
   Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1000))]).then(flow.reveal);

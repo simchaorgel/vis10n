@@ -1,0 +1,215 @@
+{
+  "name": "chess_resnet_2",
+  "model": "chess_resnet",
+  "saved": "2026-10-06T14:16:54",
+  "trained": null,
+  "description": "70m run | T4 GPU | closer to 10,000,000 trains | 2 epochs | wandb worthy-sky-4",
+  "source": "uploaded",
+  "parameters": {
+    "total": 4124864,
+    "trainable": 4124864,
+    "layers": {
+      "stem.0.weight": [
+        64,
+        12,
+        3,
+        3
+      ],
+      "stem.1.weight": [
+        64
+      ],
+      "stem.1.bias": [
+        64
+      ],
+      "blocks.0.left_branch.0.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.0.left_branch.1.weight": [
+        64
+      ],
+      "blocks.0.left_branch.1.bias": [
+        64
+      ],
+      "blocks.0.left_branch.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.0.left_branch.4.weight": [
+        64
+      ],
+      "blocks.0.left_branch.4.bias": [
+        64
+      ],
+      "blocks.1.left_branch.0.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.1.left_branch.1.weight": [
+        64
+      ],
+      "blocks.1.left_branch.1.bias": [
+        64
+      ],
+      "blocks.1.left_branch.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.1.left_branch.4.weight": [
+        64
+      ],
+      "blocks.1.left_branch.4.bias": [
+        64
+      ],
+      "blocks.2.left_branch.0.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.2.left_branch.1.weight": [
+        64
+      ],
+      "blocks.2.left_branch.1.bias": [
+        64
+      ],
+      "blocks.2.left_branch.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.2.left_branch.4.weight": [
+        64
+      ],
+      "blocks.2.left_branch.4.bias": [
+        64
+      ],
+      "blocks.3.left_branch.0.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.3.left_branch.1.weight": [
+        64
+      ],
+      "blocks.3.left_branch.1.bias": [
+        64
+      ],
+      "blocks.3.left_branch.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.3.left_branch.4.weight": [
+        64
+      ],
+      "blocks.3.left_branch.4.bias": [
+        64
+      ],
+      "blocks.4.left_branch.0.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.4.left_branch.1.weight": [
+        64
+      ],
+      "blocks.4.left_branch.1.bias": [
+        64
+      ],
+      "blocks.4.left_branch.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.4.left_branch.4.weight": [
+        64
+      ],
+      "blocks.4.left_branch.4.bias": [
+        64
+      ],
+      "blocks.5.left_branch.0.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.5.left_branch.1.weight": [
+        64
+      ],
+      "blocks.5.left_branch.1.bias": [
+        64
+      ],
+      "blocks.5.left_branch.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "blocks.5.left_branch.4.weight": [
+        64
+      ],
+      "blocks.5.left_branch.4.bias": [
+        64
+      ],
+      "end_layers.0.weight": [
+        32,
+        64,
+        1,
+        1
+      ],
+      "end_layers.1.weight": [
+        32
+      ],
+      "end_layers.1.bias": [
+        32
+      ],
+      "end_layers.4.weight": [
+        1792,
+        2048
+      ],
+      "end_layers.4.bias": [
+        1792
+      ]
+    }
+  },
+  "dataset": "Lichess",
+  "args": null,
+  "batches_per_epoch": 0,
+  "results": {
+    "final_accuracy": 0.447,
+    "best_accuracy": 0.447,
+    "accuracy_per_epoch": [],
+    "final_loss": null,
+    "loss_per_epoch": [],
+    "loss_per_batch": [],
+    "elo": {
+      "elo": 1282.4381988526675,
+      "low": 1205.880176377256,
+      "high": 1355.4759669796927,
+      "opponent": 1320,
+      "games": 65,
+      "wins": 21,
+      "draws": 16,
+      "losses": 28,
+      "measured": "2026-10-06T14:22:23"
+    }
+  },
+  "environment": {
+    "device": "cpu",
+    "torch": "2.14.0+cpu"
+  }
+}

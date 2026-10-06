@@ -19,6 +19,7 @@ from dataclasses import asdict, fields
 from datetime import datetime
 from pathlib import Path
 
+import chess
 import torch as t
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -31,6 +32,7 @@ from models import get_model
 from models import list_models as list_architectures
 from optimizers import list_optimizers
 from dream import dream
+from chess_engine import game_status, pick_move, play_match
 from predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
 from device import device
 from training.train_mnist_mlp import SimpleMLPTrainingArgs, train
@@ -389,6 +391,183 @@ def dream_digit(req: DreamRequest):
 
     pixels, probabilities = dream(loaded["model"], req.digit, clamp=req.clamp, **constraints)
     return {"pixels": pixels, "probabilities": probabilities}
+
+
+def load_for(name: str, dataset: str):
+    """A saved model, checked to be trained for `dataset`, from the shared cache. Raises HTTPException."""
+    path = WEIGHTS_DIR / f"{name}.pt"
+    info_path = path.with_suffix(".json")
+    if not re.fullmatch(r"[\w\- ]+", name) or not path.exists():
+        raise HTTPException(404, "model not found")
+    if not info_path.exists():
+        raise HTTPException(400, "no info file")
+
+    try:
+        info = json.loads(info_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(400, "could not read info file")
+
+    trained_on = info.get("dataset", "MNIST")
+    if trained_on != dataset:
+        raise HTTPException(400, f"model predicts {trained_on}")
+
+    mtime = path.stat().st_mtime
+    if loaded["path"] != path or loaded["mtime"] != mtime:
+        try:
+            loaded.update(path=path, mtime=mtime, model=load_model(path, info["model"]))
+        except Exception:
+            traceback.print_exc()
+            raise HTTPException(500, "could not load model")
+    return loaded["model"]
+
+
+class ChessRequest(BaseModel):
+    fen: str
+    model: str | None = None
+    move: str | None = None   # the player's move in UCI (e2e4), played before the model replies
+    reply: bool = True        # whether the model moves next
+
+
+@app.post("/api/chess/play")
+def chess_play(req: ChessRequest):
+    """
+    Plays the player's move (if any), then the model's reply (if asked for and the game isn't over).
+    Returns the new position with its legal moves, so the page needs no chess rules of its own.
+    """
+    try:
+        board = chess.Board(req.fen)
+    except ValueError:
+        raise HTTPException(400, "invalid position")
+
+    played = None
+    if req.move:
+        try:
+            move = chess.Move.from_uci(req.move)
+        except ValueError:
+            raise HTTPException(400, "invalid move")
+        if move not in board.legal_moves:
+            raise HTTPException(400, "illegal move")
+        played = {"uci": move.uci(), "san": board.san(move)}
+        board.push(move)
+
+    reply = None
+    if req.reply and game_status(board) is None:
+        if not req.model:
+            raise HTTPException(400, "pick a model")
+        model = load_for(req.model, "Lichess")
+        move, confidence = pick_move(model, board)
+        reply = {"uci": move.uci(), "san": board.san(move), "confidence": confidence}
+        board.push(move)
+
+    last = board.peek() if board.move_stack else None
+    return {
+        "fen": board.fen(),
+        "played": played,
+        "reply": reply,
+        "last": [chess.square_name(last.from_square), chess.square_name(last.to_square)] if last else None,
+        "status": game_status(board),
+        "legal": [move.uci() for move in board.legal_moves],
+    }
+
+
+class EloResult(BaseModel):
+    elo: float
+    low: float
+    high: float
+    opponent: int      # the Stockfish rating played against
+    games: int
+    wins: int
+    draws: int
+    losses: int
+
+
+@app.post("/api/models/{name}/elo")
+def save_elo(name: str, result: EloResult):
+    """Writes a match's rating into a chess model's info file, under results.elo."""
+    path = WEIGHTS_DIR / f"{name}.json"
+    if not re.fullmatch(r"[\w\- ]+", name) or not path.exists():
+        raise HTTPException(404, "model not found")
+    try:
+        info = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(400, "could not read info file")
+    if info.get("dataset") != "Lichess":
+        raise HTTPException(400, "not a chess model")
+
+    info.setdefault("results", {})["elo"] = {
+        **result.model_dump(),
+        "measured": datetime.now().isoformat(timespec="seconds"),
+    }
+    path.write_text(json.dumps(info, indent=2))
+    return {"ok": True}
+
+
+@app.websocket("/ws/elo")
+async def elo_socket(ws: WebSocket):
+    """
+    Page sends {"type": "start", "model": str, "elo": int, "games": int}, then optionally {"type": "cancel"}.
+    Server streams play_match()'s move/game updates, then {"type": "done", "cancelled": bool}
+    or {"type": "error", "message": str}.
+    """
+    await ws.accept()
+
+    loop = asyncio.get_running_loop()
+    updates = asyncio.Queue()
+    cancel = threading.Event()
+
+    def send(update: dict):
+        loop.call_soon_threadsafe(updates.put_nowait, update)
+
+    def run(model_name: str, elo: int, games: int):
+        try:
+            model = load_for(model_name, "Lichess")
+            play_match(model, elo, games, on_update=send, cancel=cancel)
+            send({"type": "done", "cancelled": cancel.is_set()})
+        except HTTPException as e:
+            send({"type": "error", "message": e.detail})
+        except Exception as e:
+            traceback.print_exc()
+            send({"type": "error", "message": str(e)})
+
+    async def listen():
+        try:
+            while True:
+                message = await ws.receive_json()
+                if message.get("type") == "cancel":
+                    cancel.set()
+        except (WebSocketDisconnect, RuntimeError):
+            cancel.set()
+
+    try:
+        start = await ws.receive_json()
+        model_name = start.get("model")
+        elo, games = int(start.get("elo")), int(start.get("games"))
+        if not model_name:
+            raise ValueError("pick a model")
+        if games < 1:
+            raise ValueError("play at least one game")
+    except WebSocketDisconnect:
+        return
+    except (TypeError, ValueError) as e:
+        await ws.send_json({"type": "error", "message": str(e)})
+        await ws.close()
+        return
+
+    threading.Thread(target=run, args=(model_name, elo, games), daemon=True).start()
+    listener = asyncio.create_task(listen())
+
+    try:
+        while True:
+            update = await updates.get()
+            await ws.send_json(update)
+            if update["type"] in ("done", "error"):
+                break
+        await ws.close()
+    except (WebSocketDisconnect, RuntimeError):
+        # Page went away mid-match: stop on the next move
+        cancel.set()
+    finally:
+        listener.cancel()
 
 
 class SaveRequest(BaseModel):

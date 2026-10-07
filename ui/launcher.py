@@ -1,7 +1,7 @@
 # vis10n desktop window: opens at once on a splash (the home background and a spinner), starts the
 # server alongside, and swaps the window over to the app as soon as the server answers.
 # Kept free of the server's heavy imports (torch, models, datasets) so the window appears immediately.
-# Run with: python main.py (which hands straight over to run() here)
+# Run with: python main.py from the project root (which hands straight over to run() here)
 import ctypes
 import subprocess
 import sys
@@ -12,7 +12,8 @@ from pathlib import Path
 
 import webview
 
-ROOT = Path(__file__).parent
+UI_DIR = Path(__file__).parent
+ROOT = UI_DIR.parent
 URL = "http://127.0.0.1:8000"
 
 # The native titlebar, recoloured to match the app
@@ -56,7 +57,7 @@ SPLASH = """<!doctype html>
 
 
 def splash_html():
-    scripts = "\n".join((ROOT / "assets" / name).read_text(encoding="utf-8") for name in ("canvas-bg.js", "grain-bg.js"))
+    scripts = "\n".join((UI_DIR / "assets" / name).read_text(encoding="utf-8") for name in ("canvas-bg.js", "grain-bg.js"))
     return SPLASH.replace("/*SCRIPTS*/", scripts)
 
 
@@ -94,7 +95,7 @@ def color_titlebar(window):
 def run():
     # The window needs the main thread, so the server runs as a child process (which also keeps reload working)
     server = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"],
+        [sys.executable, "-m", "uvicorn", "ui.server:app", "--host", "127.0.0.1", "--port", "8000", "--reload"],
         cwd=ROOT,
     )
     try:
@@ -133,7 +134,7 @@ def run():
         # Own app id, so the taskbar shows our icon instead of grouping the window under python.exe
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("vis10n")
         # load_app runs on its own thread once the window is up
-        webview.start(load_app, icon=str(ROOT / "assets" / "icon.ico"))
+        webview.start(load_app, icon=str(UI_DIR / "assets" / "icon.ico"))
     finally:
         # /T also kills the reload worker, which would otherwise keep holding the port
         subprocess.run(["taskkill", "/T", "/F", "/PID", str(server.pid)], capture_output=True)

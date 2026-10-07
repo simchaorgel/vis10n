@@ -1,11 +1,11 @@
 # VIS10N • ML playground
 <p>
-  <img src="assets/screenshots/screenshot1.png" width="49%">
-  <img src="assets/screenshots/screenshot2.png" width="49%">
+  <img src="ui/assets/screenshots/screenshot1.png" width="49%">
+  <img src="ui/assets/screenshots/screenshot2.png" width="49%">
 </p>
 <p>
-  <img src="assets/screenshots/screenshot7.png" width="49%">
-  <img src="assets/screenshots/screenshot6.png" width="49%">
+  <img src="ui/assets/screenshots/screenshot7.png" width="49%">
+  <img src="ui/assets/screenshots/screenshot6.png" width="49%">
 </p>
 This project is my playground for messing with training and running different types of neural networks, so far including MNIST digit classification, CIFAR image classification, and chess policy models (playing the next move).
 Parts of the model code are based off the ARENA (https://arena.education) courses implementation.
@@ -49,7 +49,7 @@ The chess elo window plays against Stockfish, which isn't committed: download it
 **Adding an architecture** – create a file in `models/` (e.g. `models/mlp_256_128.py`) that defines a `Model` class taking no arguments, with a docstring describing it. It appears in the training window's architecture list automatically. Files starting with `_` are for shared code and aren't listed. Once weights have been saved for an architecture, make a new file rather than changing its layers, or those weights won't load.
 
 ## How it works
-The frontend (`window.html`) talks to a FastAPI server (`main.py`). Training runs in a background thread and streams progress to the page over a websocket. Saved models go in `weights/` as a pair of files: `<name>.pt`, the PyTorch state dict, and `<name>.json`, which records the architecture, training args, parameter counts, per-epoch accuracy and loss, training time, device and git commit. The JSON is what tells the app which architecture to build when loading the weights.
+The frontend (`ui/index.html`) talks to a FastAPI server (`ui/server.py`). Training runs in a background thread and streams progress to the page over a websocket. Saved models go in `weights/` as a pair of files: `<name>.pt`, the PyTorch state dict, and `<name>.json`, which records the architecture, training args, parameter counts, per-epoch accuracy and loss, training time, device and git commit. The JSON is what tells the app which architecture to build when loading the weights.
 
 Before predicting, drawings are preprocessed to look like MNIST digits: cropped, scaled to fit a 20x20 box, centred by centre of mass in a 28x28 image and lightly blurred.
 
@@ -57,10 +57,7 @@ Before predicting, drawings are preprocessed to look like MNIST digits: cropped,
 - `models/` – model architectures, one file per architecture (`_`-prefixed files hold shared layers)
 - `weights/` – saved models and their info files (not committed)
 - `dataloaders/` – one module per dataset: `mnist.py` (loading and transforms), `cifar.py` (CIFAR-10 test set)
-- `assets/` – images the UI loads
 - `train_model.py` – training args and training loop
-- `predict.py` – loading saved models, preprocessing and prediction
-- `chess_engine.py` – chess position/move encoding (matching the training data), move picking and Stockfish matches
 - `engines/` – Stockfish (not committed)
-- `main.py` – FastAPI server
-- `window.html` – the UI
+- `main.py` – starts the app
+- `ui/` – the app: `server.py` (FastAPI server), `launcher.py` (the desktop window), `index.html` (the UI), `predict.py` (loading saved models, preprocessing and prediction), `dream.py` (the dream window's activation maximisation), `chess_engine.py` (chess position/move encoding matching the training data, move picking and Stockfish matches), `assets/` (scripts and images the UI loads, and the README screenshots)

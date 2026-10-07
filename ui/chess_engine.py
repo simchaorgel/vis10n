@@ -13,7 +13,7 @@ import torch.nn as nn
 
 from device import device
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).parent.parent
 ENGINES_DIR = ROOT / "engines"
 
 # A game this long is scored as a draw, so two shuffling players can't run forever

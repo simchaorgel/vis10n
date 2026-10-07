@@ -1,12 +1,5 @@
-# vis10n server: serves the UI and exposes the API the windows talk to
-# Run with: python main.py (opens the desktop window; uvicorn imports this module as the server)
-
-if __name__ == "__main__":
-    # Open the window before the heavy imports below, so it appears at once; the server process imports them itself
-    from launcher import run
-    run()
-    raise SystemExit
-
+# vis10n server: serves the UI and exposes the API the windows talk to.
+# Started by the launcher (python main.py from the project root) as: uvicorn ui.server:app
 import asyncio
 import importlib
 import json
@@ -31,13 +24,14 @@ from dataloaders import cifar, imagenet
 from models import get_model
 from models import list_models as list_architectures
 from optimizers import list_optimizers
-from dream import dream
-from chess_engine import game_status, pick_move, play_match
-from predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
+from ui.dream import dream
+from ui.chess_engine import game_status, pick_move, play_match
+from ui.predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
 from device import device
 from training.train_mnist_mlp import SimpleMLPTrainingArgs, train
 
-ROOT = Path(__file__).parent
+UI_DIR = Path(__file__).parent
+ROOT = UI_DIR.parent
 WEIGHTS_DIR = ROOT / "weights"
 
 app = FastAPI()
@@ -50,11 +44,11 @@ latest_run = None
 # UI
 @app.get("/")
 def index():
-    return FileResponse(ROOT / "window.html")
+    return FileResponse(UI_DIR / "index.html")
 
 
 # Images and other files the UI loads
-app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
+app.mount("/assets", StaticFiles(directory=UI_DIR / "assets"), name="assets")
 
 
 # API

@@ -322,6 +322,10 @@
     background: none;
   }
 
+  /* The chess backgrounds are light, so their titles are black */
+  #chessWindow > .titlebar,
+  #eloWindow > .titlebar { color: #000; }
+
   /* Canvas-painted backgrounds (grain-bg.js): the canvas fills the window behind its contents */
   .window.themed { isolation: isolate; }
   .window > .win-bg {
@@ -481,50 +485,82 @@
 
   /* Dream window: the constraints as toggles, a big digit input, and a result canvas
      that can't be drawn on */
-  /* One row of four across the top, spanning from the digit box's left edge to the image box's right */
-  #dreamToggles {
-    grid-area: 1 / 1 / 2 / 6;
-    justify-self: stretch;
+  /* The args and the digit merge into the model; the image is centred on the model's wire */
+  .dream-col {
+    width: calc(var(--square) + var(--border) * 2);
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
   }
 
-  .toggles {
-    width: auto;
-    height: auto;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--border);
-    background: var(--line);
-    border-radius: 12px;
-    overflow: hidden;
+  /* Constraints: an args card whose rows are switches; clicking a row flips it */
+  button.cell-row,
+  button.cell-row:hover,
+  button.cell-row:active {
+    width: 100%;
+    border-radius: 0;
+    background: none;
+    text-align: left;
   }
+
+  .switch {
+    position: relative;
+    width: 34px;
+    height: 20px;
+    border-radius: 10px;
+    background: #d6d2c8;
+    transition: background 0.15s ease;
+  }
+
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s ease;
+  }
+
+  .on > .switch { background: var(--accent); }
+  .on > .switch::after { transform: translateX(14px); }
+
+  /* The digit to dream: a short card under the args, headed by a plain centred title.
+     The digit is smaller than the 160px one, underlined on focus like the other inputs. */
+  #dreamDigitCell > .cell-head {
+    justify-content: center;
+    border-bottom: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+
+  .digit-box {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .digit-box > .digit-input {
+    width: 56px;
+    height: 64px;
+    border-bottom: 2px solid transparent;
+    font-size: 56px;
+  }
+
+  .digit-box > .digit-input:focus { border-bottom-color: var(--accent); }
 
   #dreamBtn { border-radius: 999px; }
 
-  .toggles button {
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 14px;
-    font-size: 15px;
-  }
-
-  .toggles button::after {
-    content: 'off';
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .toggles button.on,
-  .toggles button.on:hover {
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .toggles button.on::after {
-    content: 'on';
-    color: #fff;
+  /* The image with the dream button hanging below it, out of the layout so the image stays
+     centred on the model's wire. The args column sets the row's height, and the button reaches
+     about 24px past it, so the bottom padding is that much deeper. */
+  .dream-flow {
+    grid-template-rows: auto;   /* one row: no empty connector rows below it */
+    padding-bottom: calc(28px + 24px);
   }
 
   /* Same size as the predicted digit in the test window */
@@ -636,12 +672,11 @@
   /* Play window: a single row, so no empty rows above and below the board */
   .chess-flow { grid-template-rows: auto; }
 
-  /* The two buttons stacked, as pills like the dream button */
+  /* The two buttons stacked and joined by a wire, as pills like the dream button */
   .chess-controls {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
   }
 
   .chess-controls > button { border-radius: 999px; }
@@ -662,37 +697,88 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Match settings: a row of two across the top, like the dream toggles */
-  #eloSettings {
-    grid-area: 1 / 1 / 2 / 6;
-    justify-self: stretch;
-    grid-template-columns: repeat(2, 1fr);
+  /* Elo window: the games played, just above the tally */
+  .output-box .games {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 32px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
   }
 
-  #eloSettings label {
-    height: 40px;
+  /* Elo and dream windows: wider columns than the other windows, with the wires stretched to fill them */
+  .wide-flow { grid-template-columns: auto 72px auto 72px auto; }
+  .wide-flow > .flow-link:not(.down) { justify-self: stretch; width: auto; }
+
+  /* Elo window: two rows, the board above the result; setup and model span both, centred */
+  .elo-flow { grid-template-rows: auto 34px auto; }
+
+  /* A box that sits centred on the wire, with a cell hanging below it, out of the layout,
+     so it doesn't push the box off centre */
+  .stack { position: relative; }
+  .args-col { width: calc(var(--square) + var(--border) * 2); }
+
+  .stack > .hang {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 14px;
-    background: var(--panel);
-    color: var(--text);
-    font-size: 15px;
-    font-weight: 600;
   }
 
-  #eloSettings input {
-    width: 80px;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 4px 0;
-    background: none;
-    color: var(--text);
-    font: 700 15px ui-monospace, Consolas, monospace;
-    text-align: right;
+  #eloSettings { border-radius: 12px; overflow: hidden; }
+  #eloSettings .cell-row > input { width: 70px; }
+  .stack > .hang > button { border-radius: 999px; }
+
+  /* The model's wire splits in two: up to the board's centre and down to the result's. The two
+     cells are the same height, so their centres sit a quarter of the way in from each end,
+     less half the gap between them. */
+  .elo-fork {
+    --r: 16px;
+    --y: calc((100% - 34px) / 4);   /* 34px: the row gap */
+    position: relative;
+    align-self: stretch;
+    justify-self: stretch;
   }
 
-  #eloSettings input:focus { border-bottom-color: var(--accent); }
+  .elo-fork > i {
+    position: absolute;
+    box-sizing: border-box;
+    border: 0 solid var(--line);
+  }
+
+  .elo-fork > .fork-in {
+    left: 0;
+    right: calc(50% - var(--border));
+    top: calc(50% - var(--border) / 2);
+    height: var(--border);
+    background: var(--line);
+  }
+
+  .elo-fork > .elbow-top {
+    right: 0;
+    width: 50%;
+    top: calc(var(--y) - var(--border) / 2);
+    bottom: calc(50% - var(--border) / 2);
+    border-top-width: var(--border);
+    border-left-width: var(--border);
+    border-top-left-radius: var(--r);
+  }
+
+  .elo-fork > .elbow-bottom {
+    right: 0;
+    width: 50%;
+    top: calc(50% - var(--border) / 2);
+    bottom: calc(var(--y) - var(--border) / 2);
+    border-bottom-width: var(--border);
+    border-left-width: var(--border);
+    border-bottom-left-radius: var(--r);
+  }
 
   #eloSettings.running { pointer-events: none; opacity: 0.6; }
 
@@ -791,7 +877,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-left: 56px;
+    padding: 0 56px;   /* even on both sides, so it is centred but still kept clear of the knob */
     color: var(--muted);
     font-size: 15px;
     font-weight: 600;
@@ -848,6 +934,7 @@
     --r: 16px;
     position: relative;
     align-self: stretch;
+    justify-self: stretch;
   }
 
   .args-merge > i {
@@ -1039,14 +1126,14 @@
     pointer-events: none;
   }
 
-  /* Model picker: a dark overlay over the whole screen; the cards sit on it, above the details card */
+  /* Model picker: a dark overlay over the whole screen; the title at the top, the details card at
+     the bottom and the cards centred in the space between them */
   .picker {
     position: fixed;
     inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
     gap: 20px;
     padding: 40px 40px 24px;
     box-sizing: border-box;
@@ -1056,14 +1143,56 @@
 
   .picker[hidden] { display: none; }
 
+  /* Opening fades the overlay in and lifts its contents into place; closing plays it in reverse,
+     quicker, and the overlay is hidden when it ends */
+  .picker { animation: picker-fade 0.2s ease-out; }
+  .picker > * { animation: picker-rise 0.25s cubic-bezier(0.2, 0.8, 0.3, 1); }
+  /* Closing needs its own keyframes: an animation only restarts when its name changes */
+  .picker.closing { animation: picker-fade-out 0.15s ease-in forwards; pointer-events: none; }
+  .picker.closing > * { animation: picker-sink 0.15s ease-in forwards; }
+
+  @keyframes picker-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes picker-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  @keyframes picker-rise {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes picker-sink {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(14px) scale(0.98); }
+  }
+
+  /* Reduced motion: just the fade */
+  @media (prefers-reduced-motion: reduce) {
+    @keyframes picker-rise {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes picker-sink {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  }
+
   .picker-title {
     color: var(--home-text);
     font: 500 15px "IBM Plex Mono", Consolas, monospace;
   }
 
   .model-grid {
+    margin-block: auto;   /* takes the free space evenly above and below, centring it */
     max-height: 408px;   /* three rows of cards, then it scrolls */
-    padding: 6px;        /* room for a lifted card's outline */
+    padding: 6px;        /* room for the viewed card's outline */
     overflow-y: auto;
     scrollbar-width: none;   /* a scrollbar would squeeze the columns the chips are drawn for */
     display: grid;
@@ -1107,9 +1236,8 @@
 
   .model-card > span { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
 
-  /* The one being viewed: lifted a little, with a white outline */
+  /* The one being viewed: a white outline */
   .model-card.active {
-    transform: translateY(-3px);
     outline: 2px solid #fff;
     outline-offset: 2px;
   }
@@ -1480,28 +1608,39 @@
       <span>MNIST dream</span>
     </div>
 
-    <div class="flow">
-      <div class="flow-box toggles at-top-left" id="dreamToggles"></div>
-      <div class="flow-link down" style="grid-area: 2 / 1"></div>
-      <div class="flow-box at-input">
-        <input class="digit-input" id="dreamDigit" type="text" inputmode="numeric"
-               maxlength="1" placeholder="?" autocomplete="off" spellcheck="false">
+    <!-- The constraints and the digit to dream merge into the model, out to the dreamed image -->
+    <div class="flow wide-flow dream-flow">
+      <div class="dream-col" id="dreamCol" style="grid-area: 1 / 1">
+        <div class="train-cell" id="dreamToggles"></div>
+        <div class="train-cell" id="dreamDigitCell">
+          <div class="cell-head">dreams</div>
+          <div class="digit-box">
+            <input class="digit-input" id="dreamDigit" type="text" inputmode="numeric"
+                   maxlength="1" placeholder="?" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+      </div>
+      <div class="args-merge" id="dreamMerge" style="grid-area: 1 / 2">
+        <i class="elbow-top"></i><i class="elbow-bottom"></i><i class="merge-out"></i>
       </div>
 
-      <div class="flow-link" style="grid-area: 3 / 2"></div>
-      <button class="flow-box model-box empty at-model" id="dreamModelBtn">
+      <button class="flow-box model-box empty" id="dreamModelBtn" style="grid-area: 1 / 3">
         <span class="model-name" id="dreamModelName">select model</span>
         <span class="model-stats" id="dreamModelStats"></span>
         <span class="model-arch" id="dreamModelArch"></span>
       </button>
-      <div class="flow-link" style="grid-area: 3 / 4"></div>
+      <div class="flow-link" style="grid-area: 1 / 4"></div>
 
-      <div class="flow-box output-box at-output" id="dreamOutputBox">
-        <canvas id="dreamCanvas" width="28" height="28"></canvas>
-        <span class="conf-value" id="dreamConfValue"></span>
+      <div class="stack" style="grid-area: 1 / 5">
+        <div class="flow-box output-box" id="dreamOutputBox">
+          <canvas id="dreamCanvas" width="28" height="28"></canvas>
+          <span class="conf-value" id="dreamConfValue"></span>
+        </div>
+        <div class="hang">
+          <div class="flow-link down"></div>
+          <button class="flow-box btn submit" id="dreamBtn">dream</button>
+        </div>
       </div>
-      <div class="flow-link down" style="grid-area: 4 / 5"></div>
-      <button class="flow-box btn submit at-under-output" id="dreamBtn">dream</button>
     </div>
   </div>
 
@@ -1514,7 +1653,8 @@
     <!-- One row, no connecting lines: the buttons on the left, the board in the middle, the model on the right -->
     <div class="flow chess-flow">
       <div class="chess-controls" style="grid-area: 1 / 1">
-        <button class="flow-box btn clear" id="chessNewBtn">new game</button>
+        <button class="flow-box btn shuffle" id="chessNewBtn">restart</button>
+        <div class="flow-link down"></div>
         <button class="flow-box btn shuffle" id="chessSideBtn">playing white</button>
       </div>
 
@@ -1536,37 +1676,45 @@
       <span>CHESS elo</span>
     </div>
 
-    <div class="flow">
-      <div class="flow-box toggles at-top-left" id="eloSettings">
-        <label>stockfish elo<input id="eloOpponent" type="number" value="1320" min="1320" step="10"></label>
-        <label>games<input id="eloGames" type="number" value="50" min="1" step="1"></label>
+    <!-- Setup on the far left feeds the model, which forks out to the board above and the result below -->
+    <div class="flow wide-flow elo-flow">
+      <div class="stack args-col" style="grid-area: 1 / 1 / 4 / 2">
+        <div class="train-cell" id="eloSettings">
+          <label class="cell-row">stockfish elo<input id="eloOpponent" type="number" value="1320" min="1320" step="10"></label>
+          <label class="cell-row">games<input id="eloGames" type="number" value="50" min="1" step="1"></label>
+        </div>
+        <div class="hang">
+          <div class="flow-link down"></div>
+          <button class="flow-box btn submit" id="eloStartBtn">start match</button>
+        </div>
       </div>
-      <div class="flow-link down" style="grid-area: 2 / 1"></div>
-      <div class="flow-box board-box at-input">
+      <div class="flow-link" style="grid-area: 1 / 2 / 4 / 3"></div>
+
+      <div class="stack" style="grid-area: 1 / 3 / 4 / 4">
+        <button class="flow-box model-box empty" id="eloModelBtn">
+          <span class="model-name" id="eloModelName">select model</span>
+          <span class="model-stats" id="eloModelStats"></span>
+          <span class="model-arch" id="eloModelArch"></span>
+        </button>
+        <!-- Saves the rating into the model it was measured for -->
+        <div class="hang">
+          <div class="flow-link down"></div>
+          <button class="flow-box btn shuffle" id="eloSaveBtn" disabled>save elo</button>
+        </div>
+      </div>
+      <div class="elo-fork" style="grid-area: 1 / 4 / 4 / 5">
+        <i class="fork-in"></i><i class="elbow-top"></i><i class="elbow-bottom"></i>
+      </div>
+
+      <div class="flow-box board-box" style="grid-area: 1 / 5">
         <div class="chess-board" id="eloBoard"></div>
       </div>
-      <div class="flow-link down" style="grid-area: 4 / 1"></div>
-      <div class="flow-box btn at-under-input" id="eloProgress">no games yet</div>
-
-      <div class="flow-link" style="grid-area: 3 / 2"></div>
-      <button class="flow-box model-box empty at-model" id="eloModelBtn">
-        <span class="model-name" id="eloModelName">select model</span>
-        <span class="model-stats" id="eloModelStats"></span>
-        <span class="model-arch" id="eloModelArch"></span>
-      </button>
-      <div class="flow-link" style="grid-area: 3 / 4"></div>
-
-      <div class="flow-box output-box at-output">
+      <div class="flow-box output-box" style="grid-area: 3 / 5">
         <div class="output-digit move" id="eloValue"></div>
         <span class="conf-value" id="eloRange"></span>
+        <span class="games" id="eloProgress">no games yet</span>
         <span class="tally" id="eloTally"></span>
       </div>
-      <div class="flow-link down" style="grid-area: 4 / 5"></div>
-      <button class="flow-box btn submit at-under-output" id="eloStartBtn">start match</button>
-
-      <!-- Saves the rating into the model it was measured for -->
-      <div class="flow-link down" style="grid-area: 4 / 3"></div>
-      <button class="flow-box btn shuffle" id="eloSaveBtn" style="grid-area: 5 / 3" disabled>save elo</button>
     </div>
   </div>
 
@@ -1635,7 +1783,7 @@
       <div class="detail-head">
         <span id="detailName">no model</span>
         <button id="deleteModelBtn">delete</button>
-        <button id="loadModelBtn">+ load weights from a file</button>
+        <button id="loadModelBtn">import weights</button>
         <button id="useModelBtn">use this model</button>
       </div>
       <div class="detail-desc" id="detailDesc"></div>
@@ -1943,16 +2091,30 @@
     if (fitTrainGraph()) drawGraph(run ?? undefined);
   }).observe(graphCanvas);
 
-  // Where the two settings wires leave their cells, for the merge into the graph
-  const argsMerge = document.getElementById('argsMerge');
-  function placeArgsMerge() {
-    const top = argsMerge.getBoundingClientRect().top;
-    for (const [name, id] of [['--y1', 'modelCell'], ['--y2', 'dataCell']]) {
-      const r = document.getElementById(id).getBoundingClientRect();
-      argsMerge.style.setProperty(name, `${r.top + r.height / 2 - top}px`);
-    }
+  // Where two wires leave their cells, for a merge into one: the training settings into the graph,
+  // the dream args and digit into the model. With balance, the column is shifted so the merge
+  // point sits halfway between the two cells' centres, and the wires travel equally up and down.
+  function trackMerge(mergeId, topId, bottomId, columnId, { balance = false } = {}) {
+    const merge = document.getElementById(mergeId);
+    const column = document.getElementById(columnId);
+    const place = () => {
+      if (balance) {
+        // Centred, the column's middle is (a - b) / 4 above the midpoint of the centres;
+        // a margin of half the difference on the shorter end moves it by that much
+        const shift = (document.getElementById(topId).offsetHeight - document.getElementById(bottomId).offsetHeight) / 2;
+        column.style.marginBottom = `${Math.max(shift, 0)}px`;
+        column.style.marginTop = `${Math.max(-shift, 0)}px`;
+      }
+      const top = merge.getBoundingClientRect().top;
+      for (const [name, id] of [['--y1', topId], ['--y2', bottomId]]) {
+        const r = document.getElementById(id).getBoundingClientRect();
+        merge.style.setProperty(name, `${r.top + r.height / 2 - top}px`);
+      }
+    };
+    new ResizeObserver(place).observe(column);
+    new ResizeObserver(place).observe(merge);
   }
-  new ResizeObserver(placeArgsMerge).observe(document.getElementById('argsStack'));
+  trackMerge('argsMerge', 'modelCell', 'dataCell', 'argsStack');
 
   // Drag-to-train slider: only fires when dragged all the way to the end.
   // It toggles between start and cancel; the knob snaps back each time.
@@ -2603,7 +2765,21 @@
   // Models window: list of saved models; clicking one shows its details, "use this model" selects it
   const modelsWindow = (() => {
     const el = document.getElementById('modelsWindow');
-    const close = () => { el.hidden = true; };
+    // Plays the closing animation and hides the overlay once it ends, or after a timeout in case
+    // the animation never runs (it doesn't in a window that isn't being painted)
+    let closeTimer = null;
+    const finishClose = () => {
+      clearTimeout(closeTimer);
+      if (!el.classList.contains('closing')) return;
+      el.classList.remove('closing');
+      el.hidden = true;
+    };
+    const close = () => {
+      if (el.hidden || el.classList.contains('closing')) return;
+      el.classList.add('closing');
+      closeTimer = setTimeout(finishClose, 300);
+    };
+    el.addEventListener('animationend', e => { if (e.target === el) finishClose(); });
     // Clicks on the dark part close it: the overlay itself, or the gaps around the cards
     el.addEventListener('click', e => {
       if (e.target === el || e.target.id === 'modelList' || e.target.id === 'modelsTitle') close();
@@ -2613,7 +2789,12 @@
     });
     return {
       // Above everything open so far; the load window opened from it comes after, so on top of it
-      open: () => { el.hidden = false; el.style.zIndex = ++topZ; },
+      open: () => {
+        clearTimeout(closeTimer);
+        el.classList.remove('closing');
+        el.hidden = false;
+        el.style.zIndex = ++topZ;
+      },
       close,
     };
   })();
@@ -2887,9 +3068,12 @@
     }
   }
 
+  // Only moves the outline, so the clicked card stays the same element and a double click on it registers
   function viewModel(name) {
     viewedModel = name;
-    renderModelList();
+    for (const card of modelList.querySelectorAll('.model-card')) {
+      card.classList.toggle('active', card.dataset.name === name);
+    }
     renderDetails();
   }
 
@@ -2903,7 +3087,6 @@
 
   useModelBtn.addEventListener('click', () => useModel(viewedModel));
 
-  // Listened for on the list, since the first click of the two redraws the cards
   modelList.addEventListener('dblclick', e => useModel(e.target.closest('.model-card')?.dataset.name));
 
   async function refreshModels() {
@@ -2917,7 +3100,9 @@
     // Show the model in use if there is one, otherwise the first of this dataset
     const names = shownModels().map(m => m.name);
     const inUse = selected[pickerDataset];
-    viewModel(names.includes(inUse) ? inUse : names[0] ?? null);
+    viewedModel = names.includes(inUse) ? inUse : names[0] ?? null;
+    renderModelList();
+    renderDetails();
     for (const dataset of Object.keys(selected)) renderModelBox(dataset);
   }
 
@@ -3133,12 +3318,16 @@
 
   for (const toggle of DREAM_TOGGLES) {
     const btn = document.createElement('button');
-    btn.className = 'on';
+    btn.className = 'cell-row on';
     btn.dataset.name = toggle.name;
-    btn.textContent = toggle.label;
+    const sw = document.createElement('i');
+    sw.className = 'switch';
+    btn.append(toggle.label, sw);
     btn.addEventListener('click', () => btn.classList.toggle('on'));
     dreamToggles.append(btn);
   }
+
+  trackMerge('dreamMerge', 'dreamToggles', 'dreamDigitCell', 'dreamCol', { balance: true });
 
   function readToggles() {
     return Object.fromEntries([...dreamToggles.children].map(btn =>
@@ -3358,9 +3547,9 @@
     chessBoard.draw(fen, { last, selected, targets, pending, animate });
   }
 
-  // The new game button says how the game ended until the next one starts, and flashes errors
+  // The restart button says how the game ended until the next one starts, and flashes errors
   const chessNewLabel = () => {
-    if (!chess.status) return 'new game';
+    if (!chess.status) return 'restart';
     const [how, who] = chess.status.split(' - ');   // e.g. "checkmate - white wins", "draw - stalemate"
     if (how === 'draw') return `draw - ${who}`;
     return who.startsWith(chess.side === 'w' ? 'white' : 'black') ? 'you win!' : 'model wins';

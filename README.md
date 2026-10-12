@@ -55,9 +55,11 @@ Before predicting, drawings are preprocessed to look like MNIST digits: cropped,
 
 ## Project structure
 - `models/` – model architectures, one file per architecture (`_`-prefixed files hold shared layers)
-- `weights/` – saved models and their info files (not committed)
-- `dataloaders/` – one module per dataset: `mnist.py` (loading and transforms), `cifar.py` (CIFAR-10 test set)
-- `train_model.py` – training args and training loop
+- `weights/` – saved models and their info files
+- `optimizers/` – optimizers written from scratch (SGD, RMSprop, Adam, AdamW); any class in `optimizers.py` with `step()` and `zero_grad()` is picked up automatically
+- `dataloaders/` – one module per dataset: `mnist.py` (loading and transforms), `cifar.py` (CIFAR-10 test set), `imagenet.py`, `lichess.py` (chess positions and moves)
+- `training/` – `train_mnist_mlp.py` (training args and the training loop the app uses), plus notebooks for training the chess, CIFAR and MNIST ResNet models
+- `device.py` – picks the device tensors run on (MPS, CUDA or CPU)
 - `engines/` – Stockfish (not committed)
 - `main.py` – starts the app
 - `ui/` – the app: `server.py` (FastAPI server), `launcher.py` (the desktop window), `index.html` (the UI), `predict.py` (loading saved models, preprocessing and prediction), `dream.py` (the dream window's activation maximisation), `chess_engine.py` (chess position/move encoding matching the training data, move picking and Stockfish matches), `assets/` (scripts and images the UI loads, and the README screenshots)

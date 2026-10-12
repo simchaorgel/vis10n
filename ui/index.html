@@ -1126,6 +1126,101 @@
     pointer-events: none;
   }
 
+  /* NumPy train window: starts as the same layout as the training window, with its own rules so
+     either can be restyled alone. The shared pieces (cells, rows, slider, bars) come from above. */
+  .numpy-flow {
+    --gap-x: 96px;
+    grid-template-columns: 260px var(--gap-x) 620px;
+    grid-template-rows: auto;
+    justify-items: stretch;
+    padding: 76px 112px;   /* room around everything, more than the other windows' 28px */
+  }
+
+  /* Everything you set or press, in one column joined top to bottom by white lines */
+  .numpy-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .numpy-stack > .stack-link {
+    flex: none;
+    align-self: center;
+    width: var(--border);
+    height: 28px;
+    background: #fff;
+  }
+
+  .numpy-args {
+    border-color: #fff;
+    background: transparent;
+  }
+
+  .numpy-args > .cell-row { color: #fff; }
+  .numpy-args > .cell-row + .cell-row { border-top-color: rgba(255, 255, 255, 0.25); }
+  .numpy-args > .cell-row > input { color: #fff; }
+
+  .numpy-stack > .slider {
+    --btn-h: calc(56px - 2 * var(--border));   /* 56px with its border, the height of the save boxes */
+    flex: none;
+    border: var(--border) solid #fff;
+    border-radius: calc(var(--btn-h) / 2 + var(--border));
+    background: transparent;
+  }
+
+  .numpy-stack > .slider .slider-hint { color: #fff; }
+  .numpy-stack > .slider .slider-knob { border-color: #fff; }
+
+  /* Name and description share one box, split like the args rows */
+  .numpy-stack > .save-fields {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    border: var(--border) solid #fff;
+    border-radius: 12px;   /* the args box's rounding */
+    overflow: hidden;
+  }
+
+  .save-fields > input {
+    height: 46px;
+    border: 0;
+    padding: 0 22px;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+  }
+
+  .save-fields > input + input { border-top: 1px solid rgba(255, 255, 255, 0.25); }
+  .save-fields > input::placeholder { color: rgba(255, 255, 255, 0.55); }
+
+  /* The one filled box: green, lighter on hover and darker on press, as in the training window.
+     Text matches the start pull's hint. */
+  /* Save is pulled like start, with a green knob */
+  .numpy-stack > .save-slider .slider-knob { background: #2e9e4f; }
+
+  /* Knob and text faded until a run has finished; the border stays solid white */
+  .numpy-flow:not(.has-model) .save-slider { pointer-events: none; }
+  .numpy-flow:not(.has-model) .save-slider .slider-knob { background: rgba(46, 158, 79, 0.4); }
+  .numpy-flow:not(.has-model) .save-slider .slider-hint { color: rgba(255, 255, 255, 0.4); }
+
+  /* The graph runs the full height of the stack */
+  .numpy-graph { min-height: 400px; background: transparent; border: 0; }
+  .numpy-graph > .cell-head { border-bottom: 0; color: #fff; }
+
+  /* The key is the text itself, in its line's colour */
+  .numpy-graph .key-loss { color: #2f6fd6; }
+  .numpy-graph .key-acc  { color: #e5401c; }
+
+  #numpyGraph {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
   /* Model picker: a dark overlay over the whole screen; the title at the top, the details card at
      the bottom and the cards centred in the space between them */
   .picker {
@@ -1469,6 +1564,7 @@
 <script src="/assets/riso-bg.js"></script>
 <script src="/assets/silk-bg.js"></script>
 <script src="/assets/equilux-bg.js"></script>
+<script src="/assets/sunrise-bg.js"></script>
 <script src="/assets/chip-die.js"></script>
 </head>
 <body>
@@ -1494,6 +1590,7 @@
           <h2>Train</h2>
           <ul>
             <li><button id="openTrainBtn">MNIST train</button></li>
+            <li><button id="openNumpyBtn">pure numpy</button></li>
           </ul>
         </section>
         <section>
@@ -1770,6 +1867,47 @@
     </div>
   </div>
 
+  <!-- Trains the MLP written from scratch in NumPy (models/_pure_numpy_model.py). Its train_loop reports
+       once an epoch, so the graph moves in a jump at the end of each epoch. -->
+  <div class="window themed" id="numpyWindow">
+    <canvas class="win-bg"></canvas>
+    <div class="titlebar">
+      <span>pure numpy</span>
+    </div>
+
+    <!-- Args hang down into the start pull; the graph stands on its own, feeding save -->
+    <div class="flow numpy-flow" id="numpyFlow">
+      <!-- Args, start, then save, in one column; the graph stands on its own beside it -->
+      <div class="numpy-stack" style="grid-area: 1 / 1">
+        <div class="train-cell numpy-args" id="numpyArgsCell"></div>
+        <i class="stack-link"></i>
+        <div class="slider" id="numpySlider">
+          <div class="slider-hint">start training</div>
+          <div class="slider-knob"></div>
+        </div>
+        <i class="stack-link"></i>
+        <div class="save-fields">
+          <input id="numpyModelName" type="text" placeholder="model name" spellcheck="false">
+          <input id="numpyModelDesc" type="text" placeholder="description (optional)" spellcheck="false">
+        </div>
+        <i class="stack-link"></i>
+        <div class="slider save-slider" id="numpySaveSlider">
+          <div class="slider-hint">save model</div>
+          <div class="slider-knob"></div>
+        </div>
+      </div>
+
+      <div class="train-cell graph-cell numpy-graph" style="grid-area: 1 / 3">
+        <div class="cell-head graph-head">
+          <span class="key-loss">loss</span>
+          <span class="acc-value" id="numpyAccValue">–</span>
+          <span class="key-acc">accuracy</span>
+        </div>
+        <div class="graph-box"><canvas id="numpyGraph"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   </div>
   <!-- end flow stage -->
 
@@ -1989,24 +2127,30 @@
 
   // Graph: loss per batch (left axis), accuracy per epoch (right axis)
   const graphCanvas = document.getElementById('graph');
-  const trainGraph = { ctx: graphCanvas.getContext('2d'), width: 0, height: 0 };
+  const trainGraph = { canvas: graphCanvas, ctx: graphCanvas.getContext('2d'), width: 0, height: 0 };
 
-  // Match the canvas's pixels to the size it was laid out at; returns whether that changed
-  function fitTrainGraph() {
-    const width = Math.round(graphCanvas.clientWidth);
-    const height = Math.round(graphCanvas.clientHeight);
-    if (!width || !height || (width === trainGraph.width && height === trainGraph.height)) return false;
+  // Match the canvas's pixels to the size it was laid out at; returns whether that changed.
+  // Takes another graph ({ canvas, ctx, width, height }) for other windows' graphs.
+  function fitTrainGraph(graph = trainGraph) {
+    const { canvas } = graph;
+    const width = Math.round(canvas.clientWidth);
+    const height = Math.round(canvas.clientHeight);
+    if (!width || !height || (width === graph.width && height === graph.height)) return false;
     const dpr = window.devicePixelRatio || 1;
-    graphCanvas.width = width * dpr;
-    graphCanvas.height = height * dpr;
-    trainGraph.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    trainGraph.width = width;
-    trainGraph.height = height;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    graph.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    graph.width = width;
+    graph.height = height;
     return true;
   }
 
-  function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}) {
-    const { ctx: gctx, width: GRAPH_W, height: GRAPH_H } = trainGraph;
+  // Colours a graph can override with its own style: { text, grid, epoch, frame }; null skips drawing that part
+  const GRAPH_STYLE = { text: '#6b6760', grid: '#ece8df', epoch: '#d9d4c8', frame: '#1f1f1f' };
+
+  function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}, graph = trainGraph) {
+    const { ctx: gctx, width: GRAPH_W, height: GRAPH_H } = graph;
+    const style = { ...GRAPH_STYLE, ...graph.style };
     const pad = { l: 44, r: 48, t: 16, b: 28 };
     const w = GRAPH_W - pad.l - pad.r;
     const h = GRAPH_H - pad.t - pad.b;
@@ -2017,14 +2161,16 @@
 
     gctx.clearRect(0, 0, GRAPH_W, GRAPH_H);
     gctx.font = '11px system-ui, sans-serif';
-    gctx.fillStyle = '#6b6760';
+    gctx.fillStyle = style.text;
 
     // Horizontal grid + axis labels
     gctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
       const y = Y(i / 4);
-      gctx.strokeStyle = '#ece8df';
-      gctx.beginPath(); gctx.moveTo(pad.l, y); gctx.lineTo(pad.l + w, y); gctx.stroke();
+      if (style.grid) {
+        gctx.strokeStyle = style.grid;
+        gctx.beginPath(); gctx.moveTo(pad.l, y); gctx.lineTo(pad.l + w, y); gctx.stroke();
+      }
       gctx.textBaseline = 'middle';
       gctx.textAlign = 'right';
       gctx.fillText((maxLoss * i / 4).toFixed(1), pad.l - 8, y);
@@ -2040,8 +2186,8 @@
       gctx.setLineDash([4, 4]);
       for (let e = 1; e <= epochs; e++) {
         const x = X(e * batchesPerEpoch);
-        if (e < epochs) {
-          gctx.strokeStyle = '#d9d4c8';
+        if (e < epochs && style.epoch) {
+          gctx.strokeStyle = style.epoch;
           gctx.beginPath(); gctx.moveTo(x, pad.t); gctx.lineTo(x, pad.t + h); gctx.stroke();
         }
         gctx.fillText(`epoch ${e}`, x - (e === epochs ? 20 : 0), pad.t + h + 8);
@@ -2075,12 +2221,14 @@
     }
 
     // Axes frame
-    gctx.strokeStyle = '#1f1f1f';
-    gctx.lineWidth = 2;
-    gctx.beginPath();
-    gctx.moveTo(pad.l, pad.t); gctx.lineTo(pad.l, pad.t + h);
-    gctx.lineTo(pad.l + w, pad.t + h); gctx.lineTo(pad.l + w, pad.t);
-    gctx.stroke();
+    if (style.frame) {
+      gctx.strokeStyle = style.frame;
+      gctx.lineWidth = 2;
+      gctx.beginPath();
+      gctx.moveTo(pad.l, pad.t); gctx.lineTo(pad.l, pad.t + h);
+      gctx.lineTo(pad.l + w, pad.t + h); gctx.lineTo(pad.l + w, pad.t);
+      gctx.stroke();
+    }
   }
 
   fitTrainGraph();
@@ -2122,7 +2270,8 @@
     <path d="M2 8 H17 M11 2 L17 8 L11 14" fill="none" stroke="#fff" stroke-width="3"
       stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-  function makeSlider(el, { onStart, onCancel }) {
+  // With onPull instead of onStart/onCancel it's one-shot: each full drag just fires onPull
+  function makeSlider(el, { onStart, onCancel, onPull }) {
     const knob = el.querySelector('.slider-knob');
     const hint = el.querySelector('.slider-hint');
     const INSET = 6;
@@ -2168,7 +2317,9 @@
       setX(0);
       if (!reachedEnd) return;
 
-      if (running) {
+      if (onPull) {
+        onPull();
+      } else if (running) {
         setRunning(false);
         onCancel();
       } else {
@@ -2271,6 +2422,155 @@
   });
 
 
+  // NumPy train window: runs train_loop from models/_pure_numpy_model.py over /ws/train/numpy.
+  // train_loop only reports at the end of an epoch, so updates (and a cancel) land once an epoch.
+  (() => {
+    const NUMPY_ARGS = [
+      { name: 'learning_rate', label: 'learning rate', value: 0.1, step: 'any' },
+      { name: 'batch_size',    label: 'batch size',    value: 64,  step: 1 },
+      { name: 'epochs',        label: 'epochs',        value: 3,   step: 1 },
+    ];
+
+    for (const arg of NUMPY_ARGS) {
+      const row = document.createElement('label');
+      row.className = 'cell-row';
+      row.innerHTML = `${arg.label}<input id="numpy-arg-${arg.name}" type="number" step="${arg.step}" value="${arg.value}">`;
+      document.getElementById('numpyArgsCell').append(row);
+    }
+
+    const readArgs = () => Object.fromEntries(NUMPY_ARGS.map(arg =>
+      [arg.name, Number(document.getElementById(`numpy-arg-${arg.name}`).value)]
+    ));
+
+    const flowEl = document.getElementById('numpyFlow');
+    const sliderEl = document.getElementById('numpySlider');
+    const accValue = document.getElementById('numpyAccValue');
+    const canvas = document.getElementById('numpyGraph');
+    // White labels straight on the background: no grid, epoch lines or frame
+    const graph = {
+      canvas, ctx: canvas.getContext('2d'), width: 0, height: 0,
+      style: { text: '#fff', grid: null, epoch: null, frame: null },
+    };
+
+    let socket = null;
+    let stopping = null;   // a cancelled run's socket, open until train_loop reaches the end of its epoch
+    let run = null;
+
+    fitTrainGraph(graph);
+    drawGraph(undefined, graph);
+    new ResizeObserver(() => {
+      if (fitTrainGraph(graph)) drawGraph(run ?? undefined, graph);
+    }).observe(canvas);
+
+    function handleUpdate(update) {
+      switch (update.type) {
+        case 'batch':
+          run.loss.push(update.loss);
+          run.batchesPerEpoch = update.batches;
+          break;
+
+        case 'epoch':
+          run.accuracy.push(update.accuracy);
+          accValue.textContent = `${(update.accuracy * 100).toFixed(1)}%`;
+          drawGraph(run, graph);
+          break;
+
+        case 'done':
+          if (!update.cancelled) flowEl.classList.add('has-model');
+          end();
+          break;
+
+        case 'error':
+          console.error('numpy training error:', update.message);
+          end();
+          break;
+      }
+    }
+
+    function end() {
+      if (socket) socket.close();
+      socket = null;
+      slider.setRunning(false);
+    }
+
+    function start() {
+      // Two runs at once would share _pure_numpy_model's global grad switch, so wait for a cancelled one to stop
+      if (stopping) {
+        slider.setRunning(false);
+        sliderEl.querySelector('.slider-hint').textContent = 'stopping…';
+        return;
+      }
+
+      const args = readArgs();
+      run = { loss: [], accuracy: [], batchesPerEpoch: 0, epochs: args.epochs };
+      flowEl.classList.remove('has-model');
+      accValue.textContent = '–';
+      drawGraph(run, graph);
+
+      const ws = new WebSocket(`ws://${location.host}/ws/train/numpy`);
+      socket = ws;
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'start', args }));
+      ws.onmessage = e => {
+        if (ws === socket) handleUpdate(JSON.parse(e.data));
+      };
+      ws.onclose = () => {
+        if (ws === stopping) {
+          stopping = null;
+          sliderEl.querySelector('.slider-hint').textContent = 'start training';
+        }
+        if (ws === socket) end();
+      };
+    }
+
+    function cancel() {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'cancel' }));
+        stopping = socket;
+      }
+      socket = null;
+    }
+
+    const slider = makeSlider(sliderEl, { onStart: start, onCancel: cancel });
+
+    // Save: the same request as the training window's, for this window's run
+    const nameInput = document.getElementById('numpyModelName');
+    const descInput = document.getElementById('numpyModelDesc');
+    const saveHint = document.querySelector('#numpySaveSlider .slider-hint');
+
+    function flashSave(text) {
+      saveHint.textContent = text;
+      setTimeout(() => { saveHint.textContent = 'save model'; }, 1500);
+    }
+
+    async function save() {
+      try {
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: nameInput.value.trim(), description: descInput.value, run: 'numpy' }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          flashSave(typeof data.detail === 'string' ? data.detail : 'invalid name');
+          return;
+        }
+        console.log('saved model to', data.path);
+        nameInput.value = '';
+        descInput.value = '';
+        flashSave('saved');
+      } catch (err) {
+        console.error('save failed:', err);
+        flashSave('save failed');
+      }
+    }
+
+    makeSlider(document.getElementById('numpySaveSlider'), { onPull: save });
+    nameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && flowEl.classList.contains('has-model')) save();
+    });
+  })();
+
+
   // Windows: drag by title bar, close with the x, clicked window comes to the front
   let topZ = 1;
 
@@ -2360,6 +2660,7 @@
     ['#setWindow > .win-bg',   c => paintGrainBg(c, PRESETS.green)],                      // CIFAR test
     ['#netWindow > .win-bg',   c => paintRisoBg(c, RISO_PRESETS.dark)],                   // IMAGENET test
     ['#trainWindow > .win-bg', c => paintEquiluxBg(c, EQUILUX_PRESETS.equilux, trainSeed)], // MNIST train
+    ['#numpyWindow > .win-bg', c => paintSunriseBg(c, SUNRISE_PRESETS.sunrise)],          // pure numpy
     ['#dreamWindow > .win-bg', c => paintSilkBg(c, SILK_PRESETS.silk, dreamSeed)],          // MNIST dream
     ['#chessWindow > .win-bg', c => paintGrainBg(c, PRESETS.cyanotype)],                  // CHESS play
     ['#eloWindow > .win-bg',   c => paintGrainBg(c, PRESETS.bloom)],                      // CHESS elo
@@ -2380,6 +2681,7 @@
       { id: 'setWindow',   x: -1, y: -1 },
       { id: 'netWindow',   x: -1, y: 1 },
       { id: 'trainWindow', x: 0,  y: 1 },
+      { id: 'numpyWindow', x: 0,  y: 2 },
       { id: 'chessWindow', x: -1, y: 2 },
       { id: 'dreamWindow', x: 1,  y: 0 },
       { id: 'eloWindow',   x: 1,  y: 1 },
@@ -2500,18 +2802,37 @@
     new ResizeObserver(() => layout()).observe(stage);
     for (const n of nodes) new ResizeObserver(() => layout()).observe(n.el);
 
+    // Whether an arrow key should leave a focused field in a flow window rather than act in it.
+    // One-line text: up/down always leave; left/right leave from the start/end of the text.
+    // Number fields keep their arrows (up/down step, and their caret position can't be read),
+    // as do textareas and dropdowns, which need them. Escape leaves any of them (below).
+    function arrowLeavesField(field, key) {
+      if (!field.closest('.flow-win') || !field.matches('input[type=text], input:not([type])')) return false;
+      if (key === 'ArrowUp' || key === 'ArrowDown') return true;
+      if (field.selectionStart !== field.selectionEnd) return false;
+      return key === 'ArrowLeft' ? field.selectionStart === 0 : field.selectionEnd === field.value.length;
+    }
+
     // Arrow keys move to the neighbour in that direction
     const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     document.addEventListener('keydown', e => {
       const dir = ARROWS[e.key];
       if (!dir || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
       if (!document.getElementById('modelsWindow').hidden) return;   // the model picker is open
-      // Never steal keys from a text field or dropdown
-      if (e.target.closest('input, textarea, select')) return;
+      const field = e.target.closest('input, textarea, select');
+      if (field && !arrowLeavesField(field, e.key)) return;
       const next = focused.links.find(l => l.dx === dir[0] && l.dy === dir[1]);
       if (!next) return;
       e.preventDefault();
+      field?.blur();   // so typing doesn't carry on into a window that has slid away
       go(next.node.id);
+    });
+
+    // Escape steps out of a field in a flow window, so the arrows move between windows again
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || !document.getElementById('modelsWindow').hidden) return;
+      const field = e.target.closest('input, textarea, select');
+      if (field?.closest('.flow-win')) field.blur();
     });
 
     go(focused.id);
@@ -2531,6 +2852,7 @@
   document.getElementById('openSetBtn').addEventListener('click', () => flow.go('setWindow'));
   document.getElementById('openNetBtn').addEventListener('click', () => flow.go('netWindow'));
   document.getElementById('openTrainBtn').addEventListener('click', () => flow.go('trainWindow'));
+  document.getElementById('openNumpyBtn').addEventListener('click', () => flow.go('numpyWindow'));
   document.getElementById('openDreamBtn').addEventListener('click', () => flow.go('dreamWindow'));
   document.getElementById('openChessBtn').addEventListener('click', () => flow.go('chessWindow'));
   document.getElementById('openEloBtn').addEventListener('click', () => flow.go('eloWindow'));

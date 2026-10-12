@@ -28,6 +28,7 @@ from ui.dream import dream
 from ui.chess_engine import game_status, pick_move, play_match
 from ui.predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
 from device import device
+from training import train_numpy_mlp
 from training.train_mnist_mlp import SimpleMLPTrainingArgs, train
 
 UI_DIR = Path(__file__).parent
@@ -36,8 +37,8 @@ WEIGHTS_DIR = ROOT / "weights"
 
 app = FastAPI()
 
-# Most recent fully trained run (model + what produced it), kept in memory until saved
-latest_run = None
+# Most recent fully trained run (model + what produced it) per train window, kept in memory until saved
+latest_runs = {}
 
 
 # Routes
@@ -77,10 +78,10 @@ def optimizers_available():
     return {"optimizers": list_optimizers()}
 
 
-def build_args(raw: dict) -> SimpleMLPTrainingArgs:
+def build_args(raw: dict, args_class=SimpleMLPTrainingArgs):
     """Build training args from the page's values, keeping only known fields cast to their types."""
-    arg_fields = {f.name: f.type for f in fields(SimpleMLPTrainingArgs)}
-    return SimpleMLPTrainingArgs(**{
+    arg_fields = {f.name: f.type for f in fields(args_class)}
+    return args_class(**{
         name: arg_fields[name](value) for name, value in raw.items() if name in arg_fields
     })
 
@@ -88,9 +89,35 @@ def build_args(raw: dict) -> SimpleMLPTrainingArgs:
 @app.websocket("/ws/train")
 async def train_socket(ws: WebSocket):
     """
-    Page sends {"type": "start", "args": {...}}, then optionally {"type": "cancel"}.
+    Page sends {"type": "start", "model": str, "args": {...}}, then optionally {"type": "cancel"}.
     Server streams train()'s batch/epoch updates, then {"type": "done", "cancelled": bool}
     or {"type": "error", "message": str}.
+    """
+    def start(message: dict):
+        model_name = message.get("model")
+        if model_name not in list_architectures():
+            raise ValueError(f"unknown architecture: {model_name}")
+        args = build_args(message.get("args", {}))
+        return model_name, args, lambda **kw: train(args, get_model(model_name), **kw)
+
+    await stream_training(ws, "torch", start)
+
+
+@app.websocket("/ws/train/numpy")
+async def train_numpy_socket(ws: WebSocket):
+    """Like /ws/train, for the MLP written from scratch in NumPy; the page only sends args."""
+    def start(message: dict):
+        args = build_args(message.get("args", {}), train_numpy_mlp.NumpyMLPTrainingArgs)
+        return "numpy_mlp", args, lambda **kw: train_numpy_mlp.train(args, **kw)
+
+    await stream_training(ws, "numpy", start, device="cpu (numpy)")
+
+
+async def stream_training(ws: WebSocket, run_key: str, start, device: str | None = None):
+    """
+    Runs a training function in its own thread and streams its updates over the socket.
+    start(first message) returns (architecture name, args, trainer); trainer(on_update=, cancel=)
+    returns (loss, accuracy, model). A finished run is kept in latest_runs[run_key] until saved.
     """
     await ws.accept()
 
@@ -98,17 +125,16 @@ async def train_socket(ws: WebSocket):
     updates = asyncio.Queue()
     cancel = threading.Event()
 
-    # train() runs in its own thread; this hands its updates back to the event loop
+    # The trainer runs in its own thread; this hands its updates back to the event loop
     def send(update: dict):
         loop.call_soon_threadsafe(updates.put_nowait, update)
 
-    def run(args: SimpleMLPTrainingArgs, model_name: str):
-        global latest_run
+    def run(model_name: str, args, trainer):
         try:
             started = time.perf_counter()
-            loss, accuracy, model = train(args, get_model(model_name), on_update=send, cancel=cancel)
+            loss, accuracy, model = trainer(on_update=send, cancel=cancel)
             if not cancel.is_set():
-                latest_run = {
+                latest_runs[run_key] = {
                     "model": model,
                     "model_name": model_name,
                     "args": args,
@@ -116,6 +142,7 @@ async def train_socket(ws: WebSocket):
                     "accuracy": accuracy,
                     "train_seconds": time.perf_counter() - started,
                     "finished": datetime.now(),
+                    **({"device": device} if device else {}),
                 }
             send({"type": "done", "cancelled": cancel.is_set()})
         except Exception as e:
@@ -133,11 +160,7 @@ async def train_socket(ws: WebSocket):
             cancel.set()
 
     try:
-        start = await ws.receive_json()
-        args = build_args(start.get("args", {}))
-        model_name = start.get("model")
-        if model_name not in list_architectures():
-            raise ValueError(f"unknown architecture: {model_name}")
+        model_name, args, trainer = start(await ws.receive_json())
     except WebSocketDisconnect:
         return
     except (TypeError, ValueError) as e:
@@ -145,7 +168,7 @@ async def train_socket(ws: WebSocket):
         await ws.close()
         return
 
-    threading.Thread(target=run, args=(args, model_name), daemon=True).start()
+    threading.Thread(target=run, args=(model_name, args, trainer), daemon=True).start()
     listener = asyncio.create_task(listen())
 
     try:
@@ -567,6 +590,7 @@ async def elo_socket(ws: WebSocket):
 class SaveRequest(BaseModel):
     name: str
     description: str = ""
+    run: str = "torch"   # which train window's run: "torch" or "numpy"
 
 
 def git_state() -> dict:
@@ -624,7 +648,7 @@ def model_info(name: str, description: str, run: dict) -> dict:
 
         "environment": {
             "train_seconds": round(run["train_seconds"], 2),
-            "device": str(device),
+            "device": run.get("device", str(device)),
             "torch": t.__version__,
             **git_state(),
         },
@@ -717,6 +741,7 @@ async def upload_model(
 
 @app.post("/api/save")
 def save_model(req: SaveRequest):
+    latest_run = latest_runs.get(req.run)
     if latest_run is None:
         raise HTTPException(400, "no trained model")
 

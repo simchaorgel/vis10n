@@ -1,6 +1,6 @@
 {
   "name": "resnet-test-1",
-  "model": "resnet_mnist_1",
+  "model": "mnist_resnet_1",
   "saved": "2026-09-24T16:36:17",
   "trained": "2026-09-24T16:36:05",
   "description": "",

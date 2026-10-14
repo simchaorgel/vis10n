@@ -1,6 +1,6 @@
 {
   "name": "cifar_resnet34_test2",
-  "model": "resnet34_cifar",
+  "model": "cifar_resnet34",
   "saved": "2026-09-23T14:31:11",
   "trained": null,
   "description": "finetuned last blockgroup and classification layer for a pretrained imagenet model",

@@ -1,6 +1,6 @@
 {
   "name": "imagenet_resnet34",
-  "model": "resnet34_imagenet",
+  "model": "imagenet_resnet34",
   "saved": "2026-09-23T15:11:02",
   "trained": null,
   "description": "copy of torch imagenet model",

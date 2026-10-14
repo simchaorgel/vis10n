@@ -2,7 +2,7 @@
 import torch.nn as nn
 from torch import Tensor
 
-from ._resnet_components import *
+from .components.resnet import *
 
 # Resnet34
 ##################################################################

@@ -1,11 +1,11 @@
-# Runs train_loop from the from-scratch NumPy MLP (models/_pure_numpy_model.py) for the NumPy train window,
+# Runs train_loop from the from-scratch NumPy MLP (models/mnist_mlp_pure_numpy.py) for the NumPy train window,
 # then copies its weights into the matching torch model so it saves and loads like any other
 from dataclasses import dataclass
 
 import torch as t
 
-from models._pure_numpy_model import MLP, train_loop
-from models.numpy_mlp import Model as TorchMLP
+from models.mnist_mlp_pure_numpy import MLP, train_loop
+from models.mnist_mlp_numpy import Model as TorchMLP
 
 
 @dataclass

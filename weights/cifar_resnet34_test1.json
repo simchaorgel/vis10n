@@ -1,6 +1,6 @@
 {
   "name": "cifar_resnet34_test1",
-  "model": "resnet34_cifar",
+  "model": "cifar_resnet34",
   "saved": "2026-09-23T14:17:16",
   "trained": null,
   "description": "first finetune test; finetuned pretrained IMAGENET model to CIFAR on google colab gpus.",

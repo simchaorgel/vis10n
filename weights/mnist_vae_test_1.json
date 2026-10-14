@@ -1,0 +1,102 @@
+{
+  "name": "mnist_vae_test_1",
+  "model": "mnist_vae",
+  "saved": "2026-10-14T19:11:34",
+  "trained": "2026-10-14T19:11:34",
+  "description": "VAE trained on MNIST",
+  "parameters": {
+    "total": 422106,
+    "trainable": 422106,
+    "layers": {
+      "encoder.0.weight": [
+        16,
+        1,
+        4,
+        4
+      ],
+      "encoder.0.bias": [
+        16
+      ],
+      "encoder.2.weight": [
+        32,
+        16,
+        4,
+        4
+      ],
+      "encoder.2.bias": [
+        32
+      ],
+      "encoder.5.weight": [
+        128,
+        1568
+      ],
+      "encoder.5.bias": [
+        128
+      ],
+      "encoder.7.weight": [
+        10,
+        128
+      ],
+      "encoder.7.bias": [
+        10
+      ],
+      "decoder.0.weight": [
+        128,
+        5
+      ],
+      "decoder.0.bias": [
+        128
+      ],
+      "decoder.2.weight": [
+        1568,
+        128
+      ],
+      "decoder.2.bias": [
+        1568
+      ],
+      "decoder.5.weight": [
+        32,
+        16,
+        4,
+        4
+      ],
+      "decoder.7.weight": [
+        16,
+        1,
+        4,
+        4
+      ]
+    }
+  },
+  "dataset": "MNIST VAE",
+  "args": {
+    "latent_dim_size": 5,
+    "hidden_dim_size": 128,
+    "trainset_size": 60000,
+    "batch_size": 512,
+    "epochs": 5,
+    "lr": 0.001,
+    "betas": [
+      0.5,
+      0.999
+    ],
+    "beta_kl": 0.1,
+    "use_wandb": false,
+    "wandb_project": "mnist-vae",
+    "wandb_name": null,
+    "log_every_n_steps": 250
+  },
+  "batches_per_epoch": 118,
+  "results": {
+    "final_accuracy": null,
+    "best_accuracy": null,
+    "accuracy_per_epoch": [],
+    "final_loss": null,
+    "loss_per_epoch": [],
+    "loss_per_batch": []
+  },
+  "environment": {
+    "device": "cpu",
+    "torch": "2.14.0+cpu"
+  }
+}

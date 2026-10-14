@@ -1,6 +1,6 @@
 {
   "name": "big_mlp_1",
-  "model": "big_mlp",
+  "model": "mnist_mlp_big",
   "saved": "2026-09-15T22:01:17",
   "trained": "2026-09-15T22:01:09",
   "description": "",

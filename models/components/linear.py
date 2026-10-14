@@ -1,4 +1,4 @@
-# Layers used by simple_mlp
+# Simple custom linear componenets, used by models like simpleMLP.
 # Imports
 import numpy as np
 import torch as t
@@ -9,7 +9,6 @@ from torch import Tensor
 
 # Model componenets
 #############################################################
-
 # ReLU
 class ReLU(nn.Module):
     '''

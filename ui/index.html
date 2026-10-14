@@ -1867,7 +1867,7 @@
     </div>
   </div>
 
-  <!-- Trains the MLP written from scratch in NumPy (models/_pure_numpy_model.py). Its train_loop reports
+  <!-- Trains the MLP written from scratch in NumPy (models/mnist_mlp_pure_numpy.py). Its train_loop reports
        once an epoch, so the graph moves in a jump at the end of each epoch. -->
   <div class="window themed" id="numpyWindow">
     <canvas class="win-bg"></canvas>
@@ -2087,12 +2087,16 @@
   const archSelect = document.getElementById('archSelect');
   const optimizerSelect = document.getElementById('optimizerSelect');
 
+  // The MNIST train window only offers MNIST architectures (named mnist_...); other pickers get them all
+  const ARCH_FILTERS = new Map([[archSelect, arch => arch.name.startsWith('mnist_')]]);
+
   async function refreshArchitectures(...selects) {
     const targets = selects.length ? selects : [archSelect];
     try {
       const res = await fetch('/api/architectures');
-      const { architectures } = await res.json();
+      const { architectures: all } = await res.json();
       for (const select of targets) {
+        const architectures = all.filter(ARCH_FILTERS.get(select) ?? (() => true));
         const current = select.value;
         select.replaceChildren(...architectures.map(arch => {
           const option = new Option(arch.name, arch.name);
@@ -2422,7 +2426,7 @@
   });
 
 
-  // NumPy train window: runs train_loop from models/_pure_numpy_model.py over /ws/train/numpy.
+  // NumPy train window: runs train_loop from models/mnist_mlp_pure_numpy.py over /ws/train/numpy.
   // train_loop only reports at the end of an epoch, so updates (and a cancel) land once an epoch.
   (() => {
     const NUMPY_ARGS = [
@@ -2494,7 +2498,7 @@
     }
 
     function start() {
-      // Two runs at once would share _pure_numpy_model's global grad switch, so wait for a cancelled one to stop
+      // Two runs at once would share mnist_mlp_pure_numpy's global grad switch, so wait for a cancelled one to stop
       if (stopping) {
         slider.setRunning(false);
         sliderEl.querySelector('.slider-hint').textContent = 'stopping…';

@@ -1,7 +1,6 @@
 # vis10n server: serves the UI and exposes the API the windows talk to.
 # Started by the launcher (python main.py from the project root) as: uvicorn ui.server:app
 import asyncio
-import importlib
 import json
 import re
 import subprocess
@@ -21,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from dataloaders import cifar, imagenet
-from models import get_model
+from models import get_model, get_module
 from models import list_models as list_architectures
 from optimizers import list_optimizers
 from ui.dream import dream
@@ -64,7 +63,7 @@ def architectures():
     result = []
     for name in list_architectures():
         try:
-            description = (importlib.import_module(f"models.{name}").__doc__ or "").strip()
+            description = (get_module(name).__doc__ or "").strip()
         except Exception as e:
             traceback.print_exc()
             description = f"error: {e}"
@@ -108,7 +107,7 @@ async def train_numpy_socket(ws: WebSocket):
     """Like /ws/train, for the MLP written from scratch in NumPy; the page only sends args."""
     def start(message: dict):
         args = build_args(message.get("args", {}), train_numpy_mlp.NumpyMLPTrainingArgs)
-        return "numpy_mlp", args, lambda **kw: train_numpy_mlp.train(args, **kw)
+        return "mnist_mlp_numpy", args, lambda **kw: train_numpy_mlp.train(args, **kw)
 
     await stream_training(ws, "numpy", start, device="cpu (numpy)")
 

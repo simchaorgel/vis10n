@@ -1,6 +1,6 @@
 {
   "name": "numpy train",
-  "model": "numpy_mlp",
+  "model": "mnist_mlp_numpy",
   "saved": "2026-10-12T18:55:27",
   "trained": "2026-10-12T18:54:21",
   "description": "first numpy train in gui ong my ears are bleeding python",

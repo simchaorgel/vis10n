@@ -2,8 +2,8 @@
 import torch.nn as nn
 from torch import Tensor
 
-from ._resnet_components import *
-from ._linear_components import Flatten
+from .components.resnet import *
+from .components.linear import Flatten
 
 class ChessResnet(nn.Module):
     """

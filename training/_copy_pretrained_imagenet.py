@@ -6,13 +6,13 @@ because our layers are declared in the same order. Run it from the repo root wit
     python -m training.copy_pretrained_imagenet
 
 then import the file it writes through the app's load wizard:
-architecture resnet34_imagenet, predicts ImageNet, accuracy 73.3.
+architecture imagenet_resnet34, predicts ImageNet, accuracy 73.3.
 """
 import torch as t
 from torchvision import models
 from torchvision.models import ResNet34_Weights
 
-from models.resnet34_imagenet import Model
+from models.variations.imagenet_resnet34 import Model
 
 OUT = "imagenet_resnet34.pt"
 
@@ -42,4 +42,4 @@ if __name__ == "__main__":
     print(f"largest difference from torchvision: {difference:.2e}")
 
     t.save(model.state_dict(), OUT)
-    print(f"saved {OUT} - import it with architecture resnet34_imagenet, predicts ImageNet")
+    print(f"saved {OUT} - import it with architecture imagenet_resnet34, predicts ImageNet")

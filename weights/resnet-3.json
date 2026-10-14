@@ -1,6 +1,6 @@
 {
   "name": "resnet-3",
-  "model": "resnet_mnist_1",
+  "model": "mnist_resnet_1",
   "saved": "2026-09-24T23:59:33",
   "trained": null,
   "description": "AdamW ftw again",

@@ -1200,10 +1200,8 @@
   /* Save is pulled like start, with a green knob */
   .numpy-stack > .save-slider .slider-knob { background: #2e9e4f; }
 
-  /* Knob and text faded until a run has finished; the border stays solid white */
+  /* Until a run has finished it can't be pulled */
   .numpy-flow:not(.has-model) .save-slider { pointer-events: none; }
-  .numpy-flow:not(.has-model) .save-slider .slider-knob { background: rgba(46, 158, 79, 0.4); }
-  .numpy-flow:not(.has-model) .save-slider .slider-hint { color: rgba(255, 255, 255, 0.4); }
 
   /* The graph runs the full height of the stack */
   .numpy-graph { min-height: 400px; background: transparent; border: 0; }
@@ -1220,6 +1218,174 @@
     width: 100%;
     height: 100%;
   }
+
+  /* MNIST vae window: everything you set or press in one stack on the left (args, start, name and
+     description, save), each wired into one line to the loss graph in the middle, the reconstructions as a
+     strip on the right */
+  .vae-flow {
+    --gap-x: 72px;
+    /* The wire columns either side of the graph are wider than a plain gap, so the wires have room to curve */
+    grid-template-columns: 260px 96px 580px 96px 140px;
+    grid-template-rows: auto;
+    justify-items: stretch;
+  }
+
+  .vae-flow > .flow-link { width: 100%; }
+
+  /* Left: the stack, each cell wired out to the right */
+  .vae-stack {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Start hangs off the args and save off the name and description, each by a short line up;
+     the two pairs sit 20px apart */
+  .vae-stack > .stack-link {
+    flex: none;
+    align-self: center;
+    width: var(--border);
+    height: 20px;
+    background: var(--line);
+  }
+
+  .vae-stack > .vae-save-fields { margin-top: 20px; }
+
+  /* The wires, one from every arg row and every other cell, each curving in to join one main line that runs on
+     into the graph. Script draws them into the SVG from the rows' and cells' centres. */
+  .vae-merge {
+    position: relative;
+    align-self: stretch;
+  }
+
+  .vae-merge > svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    fill: none;
+    stroke: var(--line);
+    stroke-width: var(--border);
+  }
+
+  .vae-stack > .slider {
+    --btn-h: calc(56px - 2 * var(--border));   /* 56px with its border, like pure numpy's pulls */
+    flex: none;
+    border: var(--border) solid var(--line);
+    border-radius: calc(var(--btn-h) / 2 + var(--border));
+    background: #fff;
+  }
+
+  /* Name and description share one cell, split like the args rows */
+  .vae-save-fields > input {
+    height: 46px;
+    border: 0;
+    padding: 0 14px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+  }
+
+  .vae-save-fields > input + input { border-top: 1px solid #f2efe8; }
+  .vae-stack > .vae-save-fields { border-radius: 0; }   /* square, like the strip */
+
+  /* Save is pulled like start, with a green knob. Until a run has finished it can't be pulled. */
+  .vae-stack > .save-slider .slider-knob { background: #2e9e4f; }
+  .vae-flow:not(.has-model) .save-slider { pointer-events: none; }
+
+  /* Middle: the loss graph, centred on the row */
+  .vae-flow > .graph-cell { align-self: center; height: 420px; }
+
+  #vaeGraph {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Right: the 10 holdout digits, 0-9, top to bottom, black on white, as the model reconstructed them at a
+     logged step; the title above, the count and the history buttons below. Text is styled like the arg rows.
+     Square cornered, unlike the other cells. */
+  .vae-samples {
+    align-self: center;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .vae-flow > .vae-samples { border-radius: 0; }
+
+  .vae-samples > .vae-samples-title {
+    padding: 10px 0;
+    text-align: center;
+  }
+
+  .vae-samples-strip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .vae-samples-strip > canvas {
+    width: 44px;
+    height: 44px;
+    image-rendering: pixelated;
+  }
+
+  /* Before any images: a round dark point in the middle of each digit's square, drawn here rather than on
+     the 28px canvas so it stays round */
+  .vae-samples-strip.empty > canvas {
+    background: radial-gradient(circle, var(--line) 3px, transparent 3.5px);
+  }
+
+  /* The buttons along the bottom of the strip, white on a slim bar in the border's colour. The cell's dark bottom border
+     reads as part of the bar, so the buttons sit lower by its width to look centred in the two together. */
+  .vae-history {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+    padding: calc(4px + var(--border) / 2) 0 calc(4px - var(--border) / 2);
+    background: var(--line);   /* the border's colour, so bar and border read as one */
+    color: #fff;
+  }
+
+  .vae-history > button,
+  .vae-history > button:hover,
+  .vae-history > button:active {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    color: var(--text);
+  }
+
+  .vae-history svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .vae-history > button:hover { color: var(--accent); }
+
+  .vae-history > button,
+  .vae-history > button:active { color: #fff; }
+  .vae-history > button:disabled { pointer-events: none; }
+
+  /* One chevron (pointing right) for every button, turned to face its way */
+  #vaeHistFirst svg { transform: rotate(-90deg); }
+  #vaeHistBack svg  { transform: rotate(180deg); }
+  #vaeHistLast svg  { transform: rotate(90deg); }
 
   /* Model picker: a dark overlay over the whole screen; the title at the top, the details card at
      the bottom and the cards centred in the space between them */
@@ -1565,6 +1731,8 @@
 <script src="/assets/silk-bg.js"></script>
 <script src="/assets/equilux-bg.js"></script>
 <script src="/assets/sunrise-bg.js"></script>
+<script src="/assets/rings-bg.js"></script>
+<script src="/assets/glow-bg.js"></script>
 <script src="/assets/chip-die.js"></script>
 </head>
 <body>
@@ -1591,6 +1759,7 @@
           <ul>
             <li><button id="openTrainBtn">MNIST train</button></li>
             <li><button id="openNumpyBtn">pure numpy</button></li>
+            <li><button id="openVaeBtn">MNIST vae</button></li>
           </ul>
         </section>
         <section>
@@ -1908,6 +2077,69 @@
     </div>
   </div>
 
+  <!-- Trains the MNIST VAE (models/mnist_vae.py) with training/train_mnist_vae.py -->
+  <div class="window themed" id="vaeWindow">
+    <canvas class="win-bg"></canvas>
+    <div class="titlebar">
+      <span>MNIST vae</span>
+    </div>
+
+    <div class="flow vae-flow" id="vaeFlow">
+      <!-- Args, start, then name and description, then save, in one column, all wired into the graph -->
+      <div class="vae-stack" id="vaeStack" style="grid-area: 1 / 1">
+        <div class="train-cell" id="vaeArgsCell"></div>
+        <i class="stack-link"></i>
+        <div class="slider" id="vaeSlider">
+          <div class="slider-hint">start training</div>
+          <div class="slider-knob"></div>
+        </div>
+        <div class="train-cell vae-save-fields">
+          <input id="vaeModelName" type="text" placeholder="model name" spellcheck="false">
+          <input id="vaeModelDesc" type="text" placeholder="description (optional)" spellcheck="false">
+        </div>
+        <i class="stack-link"></i>
+        <div class="slider save-slider" id="vaeSaveSlider">
+          <div class="slider-hint">save model</div>
+          <div class="slider-knob"></div>
+        </div>
+      </div>
+      <div class="vae-merge" id="vaeMerge" style="grid-area: 1 / 2"><svg></svg></div>
+
+      <div class="train-cell graph-cell" style="grid-area: 1 / 3">
+        <div class="cell-head graph-head">
+          <span><i class="swatch"></i>loss</span>
+          <span></span>
+          <span class="acc-value" id="vaeLossValue">–</span>
+        </div>
+        <div class="graph-box"><canvas id="vaeGraph"></canvas></div>
+      </div>
+      <div class="vae-merge" id="vaeFanout" style="grid-area: 1 / 4"><svg></svg></div>
+
+      <!-- The holdout digits, 0-9, top to bottom -->
+      <div class="train-cell vae-samples" style="grid-area: 1 / 5">
+        <div class="vae-samples-title">reconstructions</div>
+        <div class="vae-samples-strip" id="vaeSamples">
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+          <canvas width="28" height="28"></canvas>
+        </div>
+        <div class="vae-history">
+          <button id="vaeHistFirst" title="first" disabled><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button id="vaeHistBack" title="back" disabled><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button id="vaeHistForward" title="forward" disabled><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button id="vaeHistLast" title="latest" disabled><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   </div>
   <!-- end flow stage -->
 
@@ -2149,8 +2381,11 @@
     return true;
   }
 
-  // Colours a graph can override with its own style: { text, grid, epoch, frame }; null skips drawing that part
-  const GRAPH_STYLE = { text: '#6b6760', grid: '#ece8df', epoch: '#d9d4c8', frame: '#1f1f1f' };
+  // Colours a graph can override with its own style: { text, grid, epoch, frame }; null skips drawing that part.
+  // accuracy: false drops the right-hand % axis, for runs with no accuracy; lossWidth is the loss line's width.
+  const GRAPH_STYLE = {
+    text: '#6b6760', grid: '#ece8df', epoch: '#d9d4c8', frame: '#1f1f1f', accuracy: true, lossWidth: 1.5,
+  };
 
   function drawGraph({ loss = [], accuracy = [], batchesPerEpoch = 0, epochs = 0 } = {}, graph = trainGraph) {
     const { ctx: gctx, width: GRAPH_W, height: GRAPH_H } = graph;
@@ -2178,8 +2413,10 @@
       gctx.textBaseline = 'middle';
       gctx.textAlign = 'right';
       gctx.fillText((maxLoss * i / 4).toFixed(1), pad.l - 8, y);
-      gctx.textAlign = 'left';
-      gctx.fillText(`${i * 25}%`, pad.l + w + 8, y);
+      if (style.accuracy) {
+        gctx.textAlign = 'left';
+        gctx.fillText(`${i * 25}%`, pad.l + w + 8, y);
+      }
     }
 
     // Epoch boundaries
@@ -2202,7 +2439,7 @@
     // Loss line
     if (loss.length > 1) {
       gctx.strokeStyle = '#2f6fd6';
-      gctx.lineWidth = 1.5;
+      gctx.lineWidth = style.lossWidth;
       gctx.beginPath();
       loss.forEach((v, i) => {
         const x = X(i + 1), y = Y(v / maxLoss);
@@ -2575,6 +2812,255 @@
   })();
 
 
+  // MNIST vae window: trains models/mnist_vae.py with training/train_mnist_vae.py over /ws/train/vae.
+  // Loss goes on the graph every batch; every few steps the 10 holdout digits come back reconstructed.
+  (() => {
+    const VAE_ARGS = [
+      { name: 'trainset_size', label: 'train set',     value: 60000, step: 1 },
+      { name: 'batch_size',    label: 'batch size',    value: 512,   step: 1 },
+      { name: 'epochs',        label: 'epochs',        value: 10,    step: 1 },
+      { name: 'lr',            label: 'learning rate', value: 0.001, step: 'any' },
+      { name: 'beta_kl',       label: 'KL weight',     value: 0.1,   step: 'any' },
+    ];
+
+    for (const arg of VAE_ARGS) {
+      const row = document.createElement('label');
+      row.className = 'cell-row';
+      row.innerHTML = `${arg.label}<input id="vae-arg-${arg.name}" type="number" step="${arg.step}" value="${arg.value}">`;
+      document.getElementById('vaeArgsCell').append(row);
+    }
+
+    const readArgs = () => Object.fromEntries(VAE_ARGS.map(arg =>
+      [arg.name, Number(document.getElementById(`vae-arg-${arg.name}`).value)]
+    ));
+
+    const flowEl = document.getElementById('vaeFlow');
+    const lossValue = document.getElementById('vaeLossValue');
+    const sampleCanvases = [...document.querySelectorAll('#vaeSamples > canvas')];   // 10, digits 0-9
+    const canvas = document.getElementById('vaeGraph');
+    // Loss line thicker than the other windows'; no accuracy axis
+    const graph = {
+      canvas, ctx: canvas.getContext('2d'), width: 0, height: 0,
+      style: { accuracy: false, lossWidth: 3 },
+    };
+
+    let socket = null;
+    let run = null;
+    let redrawQueued = false;
+
+    fitTrainGraph(graph);
+    drawGraph(undefined, graph);
+    new ResizeObserver(() => {
+      if (fitTrainGraph(graph)) drawGraph(run ?? undefined, graph);
+    }).observe(canvas);
+
+    // Wire the args and the name and description cells into the graph: each wire leaves its cell's centre
+    // heading right and curves in to join the main line at the graph's height (the merge's middle), level by then
+    // so it runs smoothly into it; the main line carries on into the graph. Measured from the merge's top left.
+    const merge = document.getElementById('vaeMerge');
+    const wireSvg = merge.querySelector('svg');
+    const stack = document.getElementById('vaeStack');
+    // One wire each from the args and the name and description cells; the pulls hang off them instead
+    const wired = [document.getElementById('vaeArgsCell'), stack.querySelector('.vae-save-fields')];
+
+    function placeMerge() {
+      const box = merge.getBoundingClientRect();
+      const join = box.width * 0.85;   // where the wires meet the main line, a short way before the graph
+      const mid = box.height / 2;
+      const wires = wired.map(el => {
+        const r = el.getBoundingClientRect();
+        const y = r.top + r.height / 2 - box.top;
+        return `M0 ${y} C${join / 2} ${y} ${join / 2} ${mid} ${join} ${mid}`;
+      });
+      wireSvg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+      wireSvg.innerHTML = [...wires, `M${join} ${mid} H${box.width}`].map(d => `<path d="${d}"/>`).join('');
+    }
+
+    new ResizeObserver(placeMerge).observe(merge);
+    new ResizeObserver(placeMerge).observe(stack);
+
+    // The other side, mirrored: one line leaves the graph at its middle and splits, each wire curving out to
+    // the height of one digit in the strip
+    const fanout = document.getElementById('vaeFanout');
+    const fanSvg = fanout.querySelector('svg');
+    const strip = document.querySelector('#vaeWindow .vae-samples');
+
+    function placeFanout() {
+      const box = fanout.getBoundingClientRect();
+      const split = box.width * 0.15;   // where the line splits, a short way after the graph
+      const mid = box.height / 2;
+      const wires = sampleCanvases.map(c => {
+        const r = c.getBoundingClientRect();
+        const y = r.top + r.height / 2 - box.top;
+        const bend = (split + box.width) / 2;
+        return `M${split} ${mid} C${bend} ${mid} ${bend} ${y} ${box.width} ${y}`;
+      });
+      fanSvg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+      fanSvg.innerHTML = [`M0 ${mid} H${split}`, ...wires].map(d => `<path d="${d}"/>`).join('');
+    }
+
+    new ResizeObserver(placeFanout).observe(fanout);
+    new ResizeObserver(placeFanout).observe(strip);
+
+    function queueRedraw() {
+      if (redrawQueued) return;
+      redrawQueued = true;
+      requestAnimationFrame(() => {
+        redrawQueued = false;
+        drawGraph(run, graph);
+      });
+    }
+
+    // images: 10 grids of 28x28 greyscale values, 0-255 (white digits on black, as MNIST is).
+    // Drawn as black ink with each value as its opacity, over the white strip: exactly the original, inverted.
+    function drawSamples(images) {
+      images.forEach((rows, i) => {
+        const ctx = sampleCanvases[i].getContext('2d');
+        const img = ctx.createImageData(28, 28);
+        rows.flat().forEach((v, j) => img.data.set([0, 0, 0, v], j * 4));
+        ctx.putImageData(img, 0, 0);
+      });
+    }
+
+    // Every samples update of the run, so earlier steps can be looked back at. While viewing the latest,
+    // new updates are shown as they arrive; after stepping back, the view stays put until » is pressed.
+    const history = [];
+    let viewing = -1;
+    const histButtons = {
+      first: document.getElementById('vaeHistFirst'),
+      back: document.getElementById('vaeHistBack'),
+      forward: document.getElementById('vaeHistForward'),
+      last: document.getElementById('vaeHistLast'),
+    };
+
+    function showSamples(index) {
+      viewing = index;
+      const last = history.length - 1;
+      // No images yet: clear canvases, with points where the digits will appear (see .empty)
+      sampleCanvases[0].parentElement.classList.toggle('empty', index < 0);
+      if (index < 0) {
+        for (const c of sampleCanvases) c.getContext('2d').clearRect(0, 0, 28, 28);
+      } else {
+        drawSamples(history[index].images);
+      }
+      histButtons.first.disabled = histButtons.back.disabled = index <= 0;
+      histButtons.forward.disabled = histButtons.last.disabled = index >= last;
+    }
+
+    histButtons.first.addEventListener('click', () => showSamples(0));
+    histButtons.back.addEventListener('click', () => showSamples(viewing - 1));
+    histButtons.forward.addEventListener('click', () => showSamples(viewing + 1));
+    histButtons.last.addEventListener('click', () => showSamples(history.length - 1));
+
+    function clearSamples() {
+      history.length = 0;
+      showSamples(-1);
+    }
+
+    showSamples(-1);   // the empty strip on load
+
+    function handleUpdate(update) {
+      switch (update.type) {
+        case 'batch':
+          run.loss.push(update.loss);
+          run.batchesPerEpoch = update.batches;
+          lossValue.textContent = update.loss.toFixed(3);
+          queueRedraw();
+          break;
+
+        case 'samples': {
+          const following = viewing === history.length - 1;
+          history.push({ step: update.step, images: update.images });
+          showSamples(following ? history.length - 1 : viewing);   // also updates the "/ latest" step
+          break;
+        }
+
+        case 'done':
+          if (!update.cancelled) flowEl.classList.add('has-model');
+          end();
+          break;
+
+        case 'error':
+          console.error('vae training error:', update.message);
+          end();
+          break;
+      }
+    }
+
+    function end() {
+      if (socket) socket.close();
+      socket = null;
+      slider.setRunning(false);
+    }
+
+    function start() {
+      const args = readArgs();
+      run = { loss: [], accuracy: [], batchesPerEpoch: 0, epochs: args.epochs };
+      flowEl.classList.remove('has-model');
+      lossValue.textContent = '–';
+      clearSamples();
+      drawGraph(run, graph);
+
+      const ws = new WebSocket(`ws://${location.host}/ws/train/vae`);
+      socket = ws;
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'start', args }));
+      // Ignore messages from an older run that was cancelled
+      ws.onmessage = e => {
+        if (ws === socket) handleUpdate(JSON.parse(e.data));
+      };
+      ws.onclose = () => {
+        if (ws === socket) end();
+      };
+    }
+
+    function cancel() {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'cancel' }));
+      }
+      socket = null;
+    }
+
+    const slider = makeSlider(document.getElementById('vaeSlider'), { onStart: start, onCancel: cancel });
+
+    // Save: the same request as the training window's, for this window's run
+    const nameInput = document.getElementById('vaeModelName');
+    const descInput = document.getElementById('vaeModelDesc');
+    const saveHint = document.querySelector('#vaeSaveSlider .slider-hint');
+
+    function flashSave(text) {
+      saveHint.textContent = text;
+      setTimeout(() => { saveHint.textContent = 'save model'; }, 1500);
+    }
+
+    async function save() {
+      try {
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: nameInput.value.trim(), description: descInput.value, run: 'vae' }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          flashSave(typeof data.detail === 'string' ? data.detail : 'invalid name');
+          return;
+        }
+        console.log('saved model to', data.path);
+        nameInput.value = '';
+        descInput.value = '';
+        flashSave('saved');
+      } catch (err) {
+        console.error('save failed:', err);
+        flashSave('save failed');
+      }
+    }
+
+    makeSlider(document.getElementById('vaeSaveSlider'), { onPull: save });
+    nameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && flowEl.classList.contains('has-model')) save();
+    });
+  })();
+
+
   // Windows: drag by title bar, close with the x, clicked window comes to the front
   let topZ = 1;
 
@@ -2659,12 +3145,15 @@
   // Windows with one are marked .themed and have a <canvas class="win-bg"> as their first child.
   const trainSeed = equiluxSeed(EQUILUX_PRESETS.equilux);
   const dreamSeed = silkSeed(SILK_PRESETS.silk);
+  const vaeSeed = glowSeed(GLOW_PRESETS.ember);
   const BACKGROUNDS = [
     ['#mainWindow > .win-bg',  c => paintGrainBg(c, PRESETS.coral)],                      // MNIST test
     ['#setWindow > .win-bg',   c => paintGrainBg(c, PRESETS.green)],                      // CIFAR test
     ['#netWindow > .win-bg',   c => paintRisoBg(c, RISO_PRESETS.dark)],                   // IMAGENET test
     ['#trainWindow > .win-bg', c => paintEquiluxBg(c, EQUILUX_PRESETS.equilux, trainSeed)], // MNIST train
     ['#numpyWindow > .win-bg', c => paintSunriseBg(c, SUNRISE_PRESETS.sunrise)],          // pure numpy
+    // rings alternative: ringsSeed / paintRingsBg with RINGS_PRESETS.forestDark
+    ['#vaeWindow > .win-bg',   c => paintGlowBg(c, GLOW_PRESETS.ember, vaeSeed)],          // MNIST vae
     ['#dreamWindow > .win-bg', c => paintSilkBg(c, SILK_PRESETS.silk, dreamSeed)],          // MNIST dream
     ['#chessWindow > .win-bg', c => paintGrainBg(c, PRESETS.cyanotype)],                  // CHESS play
     ['#eloWindow > .win-bg',   c => paintGrainBg(c, PRESETS.bloom)],                      // CHESS elo
@@ -2686,6 +3175,7 @@
       { id: 'netWindow',   x: -1, y: 1 },
       { id: 'trainWindow', x: 0,  y: 1 },
       { id: 'numpyWindow', x: 0,  y: 2 },
+      { id: 'vaeWindow',   x: 0,  y: 3 },
       { id: 'chessWindow', x: -1, y: 2 },
       { id: 'dreamWindow', x: 1,  y: 0 },
       { id: 'eloWindow',   x: 1,  y: 1 },
@@ -2857,6 +3347,7 @@
   document.getElementById('openNetBtn').addEventListener('click', () => flow.go('netWindow'));
   document.getElementById('openTrainBtn').addEventListener('click', () => flow.go('trainWindow'));
   document.getElementById('openNumpyBtn').addEventListener('click', () => flow.go('numpyWindow'));
+  document.getElementById('openVaeBtn').addEventListener('click', () => flow.go('vaeWindow'));
   document.getElementById('openDreamBtn').addEventListener('click', () => flow.go('dreamWindow'));
   document.getElementById('openChessBtn').addEventListener('click', () => flow.go('chessWindow'));
   document.getElementById('openEloBtn').addEventListener('click', () => flow.go('eloWindow'));

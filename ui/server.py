@@ -27,7 +27,7 @@ from ui.dream import dream
 from ui.chess_engine import game_status, pick_move, play_match
 from ui.predict import load_model, predict, predict_cifar, predict_imagenet, predict_photo
 from device import device
-from training import train_numpy_mlp
+from training import train_mnist_vae, train_numpy_mlp
 from training.train_mnist_mlp import SimpleMLPTrainingArgs, train
 
 UI_DIR = Path(__file__).parent
@@ -112,7 +112,25 @@ async def train_numpy_socket(ws: WebSocket):
     await stream_training(ws, "numpy", start, device="cpu (numpy)")
 
 
-async def stream_training(ws: WebSocket, run_key: str, start, device: str | None = None):
+@app.websocket("/ws/train/vae")
+async def train_vae_socket(ws: WebSocket):
+    """Like /ws/train, for the MNIST VAE. Streams "samples" updates too: the holdout digits reconstructed."""
+    def start(message: dict):
+        args = build_args(message.get("args", {}), train_mnist_vae.VAEArgs)
+
+        # A VAE has no accuracy; stream_training wants (loss, accuracy, model)
+        def trainer(**kw):
+            losses, model = train_mnist_vae.train(args, **kw)
+            return losses, [], model
+
+        return "mnist_vae", args, trainer
+
+    # Not "MNIST": the MNIST test and dream windows expect a classifier
+    await stream_training(ws, "vae", start, dataset="MNIST VAE")
+
+
+async def stream_training(ws: WebSocket, run_key: str, start, device: str | None = None,
+                          dataset: str | None = None):
     """
     Runs a training function in its own thread and streams its updates over the socket.
     start(first message) returns (architecture name, args, trainer); trainer(on_update=, cancel=)
@@ -142,6 +160,7 @@ async def stream_training(ws: WebSocket, run_key: str, start, device: str | None
                     "train_seconds": time.perf_counter() - started,
                     "finished": datetime.now(),
                     **({"device": device} if device else {}),
+                    **({"dataset": dataset} if dataset else {}),
                 }
             send({"type": "done", "cancelled": cancel.is_set()})
         except Exception as e:
@@ -589,7 +608,7 @@ async def elo_socket(ws: WebSocket):
 class SaveRequest(BaseModel):
     name: str
     description: str = ""
-    run: str = "torch"   # which train window's run: "torch" or "numpy"
+    run: str = "torch"   # which train window's run: "torch", "numpy" or "vae"
 
 
 def git_state() -> dict:

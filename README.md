@@ -7,12 +7,12 @@
   <img src="ui/assets/screenshots/screenshot7.png" width="49%">
   <img src="ui/assets/screenshots/screenshot6.png" width="49%">
 </p>
-This project is my playground for messing with training and running different types of neural networks, so far including MNIST digit classification, CIFAR image classification, and chess policy models (playing the next move).
-Parts of the model code are based off the ARENA (https://arena.education) courses implementation.
-The UI for exploring, testing, and training different models is navigated like a gearbox, with different branches corresponding to groups of function (running, training, lab).
+This project is my playground for messing with training and running different types of neural networks, which so far include MNIST and CIFAR MLP image classification, chess playing RESNETs, and genarative VAEs.
+Parts of the code are based off the ARENA (https://arena.education) courses implementations.
+The UI for exploring, testing, and training different models is navigated like a gearbox, with different branches grouping function (running | training | lab).
 
 ## Credits
-- Model python code - myself
+- ML model python code - myself
 - UI code (HTML, FastAPI) - Claude Opus 5
 - predict.py, image preprocessing - Claude
 - UI design - myself, background pixel art - Claude

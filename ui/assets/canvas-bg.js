@@ -1,4 +1,4 @@
-// Shared plumbing for the canvas backgrounds (grain-bg.js, riso-bg.js, silk-bg.js, sunrise-bg.js, ...).
+// Shared plumbing for the canvas backgrounds (grain-bg.js, riso-bg.js, silk-bg.js, sunrise-bg.js, mesh-bg.js, dither-bg.js, haze-bg.js, strata-bg.js, rings-bg.js, glow-bg.js, ...).
 // Each painter is just paint(canvas, ...); mountCanvasBg keeps it painted at the canvas's size.
 
 // Size the canvas's pixels to its laid-out size (device pixels, capped at 2x). Returns { w, h, dpr }.
